@@ -22,7 +22,9 @@ import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.window.WImageDialog;
 import org.compiere.model.GridField;
 import org.compiere.model.MImage;
+import org.compiere.model.MSysConfig;
 import org.compiere.util.CLogger;
+import org.compiere.util.CacheMgt;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.zkoss.image.AImage;
@@ -32,6 +34,7 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Cell;
+import org.zkoss.zul.Html;
 import org.zkoss.zul.Image;
 
 /**
@@ -157,6 +160,8 @@ public class WImageEditor extends WEditor
 			m_mImage = null;
 			AImage img = null;
 			getComponent().setContent(img);
+			getComponent().setWidth(null);
+			getComponent().setHeight(null);
 			return;
 		}
 		//  Get/Create Image
@@ -174,13 +179,24 @@ public class WImageEditor extends WEditor
 			}
 		}
 		getComponent().setContent(img);
+		if (img != null)
+		{
+			String width = MSysConfig.getIntValue(MSysConfig.ZK_THUMBNAIL_IMAGE_WIDTH, 100, Env.getAD_Client_ID(Env.getCtx()))+"px";
+			String height = MSysConfig.getIntValue(MSysConfig.ZK_THUMBNAIL_IMAGE_HEIGHT, 100, Env.getAD_Client_ID(Env.getCtx()))+"px";
+			getComponent().setWidth(width);
+			getComponent().setHeight(height);
+		}
+		else
+		{
+			getComponent().setWidth(null);
+			getComponent().setHeight(null);
+		}
     }
     
-	
     @Override
 	public String getDisplayTextForGridView(Object value) {
-		if (value == null) {
-			return "";
+		if (value == null || (value instanceof Integer && (Integer)value == 0)) {
+			return "<span class='no-image'/>";
 		} else {
 			return "...";
 		}
@@ -210,6 +226,7 @@ public class WImageEditor extends WEditor
 							newValue = Integer.valueOf(AD_Image_ID);
 						//
 						m_mImage = null;	//	force reload
+						CacheMgt.get().reset(MImage.Table_Name, AD_Image_ID);
 						setValue(newValue);	//	set explicitly
 						//
 						ValueChangeEvent vce = new ValueChangeEvent(WImageEditor.this, gridField.getColumnName(), oldValue, newValue);
@@ -230,5 +247,14 @@ public class WImageEditor extends WEditor
 	 */
 	@Override
 	public void fillHorizontal() {
-	}		
+	}
+
+	@Override
+	public Component getDisplayComponent() {
+		if (m_mImage == null)
+			return new Html();
+		else
+			return null;
+	}
+
 }
