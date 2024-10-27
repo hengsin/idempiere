@@ -479,7 +479,24 @@ public class InvoiceGenerate extends SvrProcess
 		MInvoiceLine line = new MInvoiceLine (m_invoice);
 		line.setShipLine(sLine);
 		if (sLine.sameOrderLineUOM())
+		{
+			MDocType docType = MDocType.get(ship.getC_DocType_ID());
+			if (docType.isShipConfirm() 
+				&& (order.getInvoiceRule().equals(MOrder.INVOICERULE_AfterDelivery) 
+					|| order.getInvoiceRule().equals(MOrder.INVOICERULE_AfterOrderDelivered) 
+					|| order.getInvoiceRule().equals(MOrder.INVOICERULE_CustomerScheduleAfterDelivery)) 
+				&& sLine.getTargetQty() != null && sLine.getTargetQty().signum() != 0)
+			{
+				if (sLine.getQtyEntered().compareTo(sLine.getTargetQty()) == 0)
+					line.setQtyEntered(sLine.getMovementQty());
+				else
+					line.setQtyEntered(sLine.getMovementQty()
+							.multiply(sLine.getQtyEntered())
+							.divide(sLine.getTargetQty(), 12, RoundingMode.HALF_UP));
+			}
+			else
 			line.setQtyEntered(sLine.getQtyEntered());
+		}
 		else
 			line.setQtyEntered(sLine.getMovementQty());
 		line.setQtyInvoiced(sLine.getMovementQty());
