@@ -19,9 +19,9 @@ package org.adempiere.ui.print;
 import org.compiere.print.ReportEngine;
 
 /**
- * 
+ * Report viewer provider interface
  * @author Low Heng Sin
- *
+ * @see ReportCtl#getReportViewerProvider()
  */
 public interface ReportViewerProvider {
 	/**
