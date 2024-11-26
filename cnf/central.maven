@@ -268,3 +268,9 @@ org.glassfish.hk2:hk2-locator:2.6.1
 org.glassfish.hk2:hk2-api:2.6.1
 org.glassfish.hk2:hk2-utils:2.6.1
 org.glassfish.hk2:osgi-resource-locator:1.0.3
+
+#markdown
+org.commonmark:commonmark:0.24.0
+org.commonmark:commonmark-ext-gfm-tables:0.24.0
+org.commonmark:commonmark-ext-autolink:0.24.0
+org.nibor.autolink:autolink:0.11.0

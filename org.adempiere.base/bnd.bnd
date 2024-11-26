@@ -42,7 +42,10 @@
 	com.googlecode.htmlcompressor:htmlcompressor,\
 	org.eclipse.equinox.common;version='3.18',\
 	groovy-jsr223;version='3.0',\
-	org.apache.poi:poi-ooxml-schemas;version='4.1.2'	
+	org.apache.poi:poi-ooxml-schemas;version='4.1.2',\
+	org.commonmark:commonmark,\
+	org.commonmark:commonmark-ext-gfm-tables,\
+	org.commonmark:commonmark-ext-autolink
 Bundle-SymbolicName: org.adempiere.base;singleton:=true
 Bundle-Activator: org.adempiere.base.BaseActivator
 Bundle-Version: 12.0.0
@@ -109,6 +112,7 @@ Export-Package: \
 	org.compiere.sla,\
 	org.compiere.impexp,\
 	org.compiere.report.core,\
+	org.adempiere.base.markdown,\
 	!org.compiere.install
 Import-Package: com.google.javascript.jscomp;resolution:=optional,\
 	!org.compiere.install,\
@@ -123,6 +127,10 @@ Import-Package: com.google.javascript.jscomp;resolution:=optional,\
 	lib/cron4j.jar=${repo;it.sauronsoftware.cron4j:cron4j};lib:=true, \
 	lib/htmlcompressor.jar=${repo;com.googlecode.htmlcompressor:htmlcompressor};lib:=true, \
 	lib/yuicompressor.jar=${repo;com.yahoo.platform.yui:yuicompressor};lib:=true, \
+	lib/commonmark.jar=${repo;org.commonmark:commonmark};lib:=true, \
+	lib/commonmark-ext-autolink.jar=${repo;org.commonmark:commonmark-ext-autolink};lib:=true, \
+	lib/commonmark-ext-gfm-tables.jar=${repo;org.commonmark:commonmark-ext-gfm-tables};lib:=true, \
+	lib/autolink.jar=${repo;org.nibor.autolink:autolink};lib:=true, \
 	plugin.xml, schema/=schema/,\
 	META-INF/javamail.default.address.map=META-INF/javamail.default.address.map,\
 	OSGI-INF/metatype=OSGI-INF/metatype
