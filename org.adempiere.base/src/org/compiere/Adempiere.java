@@ -65,9 +65,9 @@ public final class Adempiere
 	/** Main Version String         */
 	static public String	MAIN_VERSION	= "Release 12";
 	/** Detail Version as date      Used for Client/Server		*/
-	static public String	DATE_VERSION	= "2023-12-24";
+	static public String	DATE_VERSION	= "2024-12-24";
 	/** Database Version as date    Compared with AD_System		*/
-	static public String	DB_VERSION		= "2023-12-24";
+	static public String	DB_VERSION		= "2024-12-24";
 
 	/** Product Name            */
 	static public final String	NAME 			= "iDempiere\u00AE";
@@ -90,7 +90,7 @@ public final class Adempiere
 	/** Subtitle                */
 	static public final String	SUB_TITLE		= "Smart Suite ERP, CRM and SCM";
 	static public final String	ADEMPIERE_R		= "iDempiere\u00AE";
-	static public final String	COPYRIGHT		= "\u00A9 1999-2024 iDempiere\u00AE";
+	static public final String	COPYRIGHT		= "\u00A9 1999-2025 iDempiere\u00AE";
 
 	static private String		s_ImplementationVersion = null;
 	static private String		s_ImplementationVendor = null;
@@ -106,13 +106,13 @@ public final class Adempiere
 
 	/**	Logging								*/
 	private static CLogger		log = null;
-
+	
 	/** Thread pool **/
 	private final static ScheduledThreadPoolExecutor threadPoolExecutor = createThreadPool();
 	static {
 		Trx.startTrxMonitor();
 	}
-
+	
 	 /** A list of event listeners for this component.	*/
     private static EventListenerList m_listenerList = new EventListenerList();
 
@@ -168,7 +168,7 @@ public final class Adempiere
 	/**
 	 * @return true if application version should be shown to user
 	 */
-	public static boolean isVersionShown(){
+	public static boolean isVersionShown(){ 
 		return MSysConfig.getBooleanValue(MSysConfig.APPLICATION_MAIN_VERSION_SHOWN, true);
 	}
 
@@ -206,7 +206,7 @@ public final class Adempiere
 	/**
 	 * @return true if application host should be shown to user
 	 */
-	public static boolean isHostShown()
+	public static boolean isHostShown() 
 	{
 		boolean defaultVal = MSystem.get(Env.getCtx()).getSystemStatus().equalsIgnoreCase("P") ? false : true;
 		return MSysConfig.getBooleanValue(MSysConfig.APPLICATION_HOST_SHOWN, defaultVal);
@@ -215,12 +215,12 @@ public final class Adempiere
 	/**
 	 * @return version of iDempiere AD
 	 */
-	public static String getDatabaseVersion()
+	public static String getDatabaseVersion() 
 	{
 		return MSysConfig.getValue(MSysConfig.APPLICATION_DATABASE_VERSION,
 				DB.getSQLValueString(null, "select lastmigrationscriptapplied from ad_system"));
 	}
-
+	
 	/**
 	 *	Short Summary
 	 *  @return short summary (name + main_version + sub_title)
@@ -533,7 +533,7 @@ public final class Adempiere
 			System.exit(1);
 
 		Ini.setClient (isClient);		//	init logging in Ini
-
+		
 		if (! isClient)  // Calling this on client is dropping the link with eclipse console
 			CLogMgt.initialize(isClient);
 		//	Init Log
@@ -564,7 +564,7 @@ public final class Adempiere
 				}
 			}
 		}
-
+		
 		//	Set UI
 		if (isClient)
 		{
@@ -576,9 +576,9 @@ public final class Adempiere
 		DB.setDBTarget(CConnection.get());
 
 		createThreadPool();
-
+		
 		fireServerStateChanged(new ServerStateChangeEvent(new Object(), ServerStateChangeEvent.SERVER_START));
-
+		
 		if (isClient)		//	don't test connection
 			return false;	//	need to call
 
@@ -602,9 +602,9 @@ public final class Adempiere
 		if (max <= 0) {
 			max = defaultMax;
 		}
-
+		
 		// start thread pool
-		return new ScheduledThreadPoolExecutor(max);
+		return new ScheduledThreadPoolExecutor(max);								
 	}
 
 	/**
@@ -621,7 +621,7 @@ public final class Adempiere
 			log.severe ("No Database");
 			return false;
 		}
-
+		
 		//	Check Build
 		if (!DB.isBuildOK(Env.getCtx()))
 		{
@@ -630,11 +630,11 @@ public final class Adempiere
 			log = null;
 			return false;
 		}
-
+		
 		MSystem system = MSystem.get(Env.getCtx());	//	Initializes Base Context too
 		if (system == null)
 			return false;
-
+		
 		//	Initialize main cached Singletons
 		ModelValidationEngine.get();
 		try
@@ -678,10 +678,10 @@ public final class Adempiere
 		{
 			log.warning("Not started: " + className + " - " + e.getMessage());
 		}
-
+		
 		if (!isClient)
 			DB.updateMail();
-
+				
 		return true;
 	}	//	startupEnvironment
 
@@ -692,7 +692,7 @@ public final class Adempiere
 	public static URL getResource(String name) {
 		return Core.getResourceFinder().getResource(name);
 	}
-
+	
 	/**
 	 * Stop instance
 	 */
@@ -700,14 +700,14 @@ public final class Adempiere
 		threadPoolExecutor.shutdown();
 		log = null;
 	}
-
+	
 	/**
 	 * @return {@link ScheduledThreadPoolExecutor}
 	 */
 	public static ScheduledThreadPoolExecutor getThreadPoolExecutor() {
 		return threadPoolExecutor;
 	}
-
+	
 	/**
 	 *  @param l listener
 	 */
@@ -715,7 +715,7 @@ public final class Adempiere
 	{
 		m_listenerList.remove(ServerStateChangeListener.class, l);
 	}
-
+	
 	/**
 	 *  @param l listener
 	 */
@@ -723,7 +723,7 @@ public final class Adempiere
 	{
 		m_listenerList.add(ServerStateChangeListener.class, l);
 	}
-
+	
 	/**
 	 * Fire event
 	 * @param e
