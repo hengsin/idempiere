@@ -7,7 +7,7 @@
 	org.adempiere.base;version=latest,\
 	org.apache.activemq.activemq-client,\
 	org.apache.geronimo.specs.geronimo-jms_1.1_spec
-Bundle-Version: 12.0.0
+Bundle-Version: 13.0.0
 Bundle-SymbolicName: org.adempiere.replication;singleton:=true
 Bundle-Activator: org.adempiere.replication.ActivatorImpl
 Import-Package: *

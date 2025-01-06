@@ -1,6 +1,6 @@
 Bundle-Name: iDempiere Ice Blue Compact Theme
 Bundle-SymbolicName: org.idempiere.zk.iceblue_c.theme
-Bundle-Version: 12.0.0
+Bundle-Version: 13.0.0
 Bundle-Vendor: iDempiere
 Import-Package: *
 Fragment-Host: org.adempiere.ui.zk;bundle-version="12.0.0"

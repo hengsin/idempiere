@@ -6,7 +6,7 @@
 	com.hazelcast:hazelcast;version='5.3.7'
 Bundle-Activator: org.idempiere.hazelcast.service.Activator
 Bundle-SymbolicName: org.idempiere.hazelcast.service
-Bundle-Version: 12.0.0
+Bundle-Version: 13.0.0
 -includeresource: lib/hazelcast.jar=${repo;com.hazelcast:hazelcast};lib:=true
 -exportcontents: com.hazelcast.*;version=5.3.7
 Export-Package: org.idempiere.hazelcast.service

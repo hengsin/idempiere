@@ -11,7 +11,7 @@
 	zul;version='10.0'
 Bundle-Name: Pivot Renderer for Report Viewer
 Bundle-SymbolicName: org.idempiere.zk.pivot
-Bundle-Version: 12.0.0
+Bundle-Version: 13.0.0
 Bundle-Vendor: idempiere.org
 Import-Package: *
 Fragment-Host: org.adempiere.ui.zk;bundle-version="12.0.0"

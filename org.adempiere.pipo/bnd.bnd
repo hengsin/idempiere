@@ -9,7 +9,7 @@
 	org.apache.commons.commons-codec,\
 	org.apache.ant:ant;version='1.10',\
 	org.adempiere.plugin.utils;version=latest
-Bundle-Version: 12.0.0
+Bundle-Version: 13.0.0
 Bundle-SymbolicName: org.adempiere.pipo;singleton:=true
 Bundle-Activator: org.adempiere.pipo2.BundleActivator
 Import-Package: *

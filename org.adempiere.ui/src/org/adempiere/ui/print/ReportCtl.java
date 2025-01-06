@@ -62,14 +62,17 @@ public class ReportCtl
 	/**
 	 * @deprecated Please use {@link ServerReportCtl#PARAM_PRINTER_NAME}
 	 */
+	@Deprecated	
 	public static final String PARAM_PRINTER_NAME = ServerReportCtl.PARAM_PRINTER_NAME;
 	/**
 	 * @deprecated Please use {@link ServerReportCtl#PARAM_PRINT_FORMAT}
 	 */
+	@Deprecated
 	public static final String PARAM_PRINT_FORMAT = ServerReportCtl.PARAM_PRINT_FORMAT;
 	/**
 	 * @deprecated Please use {@link ServerReportCtl#PARAM_PRINT_INFO}
 	 */
+	@Deprecated
 	public static final String PARAM_PRINT_INFO = ServerReportCtl.PARAM_PRINT_INFO;
 
 	/**
@@ -78,7 +81,6 @@ public class ReportCtl
 	private ReportCtl()
 	{
 	}	//	ReportCtrl
-
 
 	/**	Static Logger	*/
 	private static final CLogger	s_log	= CLogger.getCLogger (ReportCtl.class);

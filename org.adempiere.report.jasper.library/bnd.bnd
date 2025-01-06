@@ -2,7 +2,7 @@
 	net.sf.jasperreports.engine
 Bundle-Name: JasperReport Library
 Bundle-SymbolicName: org.adempiere.report.jasper.library
-Bundle-Version: 12.0.0
+Bundle-Version: 13.0.0
 Bundle-Vendor: iDempiere Community
 Import-Package: !com.sun.org.apache.xml.internal.serialize, \
 	!mondrian.olap4j, !netscape.ldap, !org.apache.oro.*, \

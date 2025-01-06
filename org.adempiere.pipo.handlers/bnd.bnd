@@ -6,7 +6,7 @@
 	org.eclipse.equinox.common;version='3.18',\
 	org.adempiere.base;version=latest,\
 	org.adempiere.pipo;version=latest
-Bundle-Version: 12.0.0
+Bundle-Version: 13.0.0
 Bundle-SymbolicName: org.adempiere.pipo.handlers;singleton:=true
 Import-Package: *
 -includeresource: plugin.xml

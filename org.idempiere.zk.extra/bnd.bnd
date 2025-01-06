@@ -15,7 +15,7 @@
 	zk
 Bundle-Name: extra zk library
 Bundle-SymbolicName: org.idempiere.zk.extra
-Bundle-Version: 12.0.0
+Bundle-Version: 13.0.0
 Bundle-Vendor: iDempiere Community
 Import-Package: *;resolution:=optional
 -nouses: true

@@ -9,7 +9,7 @@
 	org.netbeans.api:org-openide-util-lookup
 Bundle-Name: iDempiere UI base
 Bundle-SymbolicName: org.adempiere.ui
-Bundle-Version: 12.0.0
+Bundle-Version: 13.0.0
 Bundle-Vendor: iDempiere Community
 Import-Package: !sun.awt.*, *
 -includeresource: lib/org-netbeans-api-visual.jar=${repo;org.netbeans.api:org-netbeans-api-visual};lib:=true, \

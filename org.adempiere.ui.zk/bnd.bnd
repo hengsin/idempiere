@@ -45,7 +45,7 @@
 src: WEB-INF/src
 Bundle-Name: iDempiere Web Client
 Bundle-SymbolicName: org.adempiere.ui.zk;singleton:=true
-Bundle-Version: 12.0.0
+Bundle-Version: 13.0.0
 Bundle-Vendor: iDempiere Community
 Bundle-Activator: org.adempiere.webui.WebUIActivator
 Import-Package: \

@@ -9,7 +9,7 @@
 	lib/jpayment.jar;version=file,\
 	lib/payflow.jar;version=file,\
 	lib/Verisign.jar;version=file
-Bundle-Version: 12.0.0
+Bundle-Version: 13.0.0
 Bundle-SymbolicName: org.adempiere.payment.processor;singleton:=true
 Import-Package: com.sun.*;resolution:=optional, *
 -includeresource: lib/;lib:=true, plugin.xml

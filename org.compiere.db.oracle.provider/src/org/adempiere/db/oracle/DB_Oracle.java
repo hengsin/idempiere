@@ -804,6 +804,7 @@ public class DB_Oracle implements AdempiereDatabase
      *  @return data type
      *  @deprecated
      */
+    @Deprecated
     public String getDataType (String columnName, int displayType, int precision,
         boolean defaultValue)
     {

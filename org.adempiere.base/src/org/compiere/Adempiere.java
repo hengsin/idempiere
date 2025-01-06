@@ -63,7 +63,7 @@ public final class Adempiere
 	@Deprecated
 	static public final String	ID				= "$Id$";
 	/** Main Version String         */
-	static public String	MAIN_VERSION	= "Release 12";
+	static public String	MAIN_VERSION	= "Release 13";
 	/** Detail Version as date      Used for Client/Server		*/
 	static public String	DATE_VERSION	= "2024-12-24";
 	/** Database Version as date    Compared with AD_System		*/

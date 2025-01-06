@@ -16,7 +16,7 @@
 	org.adempiere.ui.zk;version=latest
 Bundle-Name: zk keikai
 Bundle-SymbolicName: org.idempiere.keikai
-Bundle-Version: 12.0.0
+Bundle-Version: 13.0.0
 Import-Package: !com.sun.javadoc, !com.sun.tools.javadoc, !junit.*, \
 	!org.jsoup.*, !org.zkoss.poi.generator, \
 	!schemasMicrosoftComOfficeExcel, \

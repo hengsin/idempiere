@@ -35,6 +35,7 @@ import org.osgi.service.component.annotations.Component;
  * @deprecated
  */
 @Component(service = IModelFactory.class, property = "service.ranking:Integer=-1")
+@Deprecated
 public class DefaultModelFactory extends AbstractModelFactory {
 
 	private CCache<String,Class<?>> s_classCache = new CCache<String,Class<?>>(null, "PO_Class", 100, 120, false, 2000);
