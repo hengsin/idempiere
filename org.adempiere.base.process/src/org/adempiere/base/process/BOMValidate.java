@@ -40,6 +40,7 @@ import org.compiere.util.Env;
  *  @version $Id$
  */
 @org.adempiere.base.annotation.Process (name = "org.compiere.process.BOMValidate")
+@Deprecated
 public class BOMValidate extends SvrProcess
 {
 	/**	The Product			*/
