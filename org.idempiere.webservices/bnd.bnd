@@ -35,3 +35,5 @@ Jetty-Environment: ee8
 	WEB-INF/web.xml=WEB-INF/web.xml, plugin.xml, \
 	META-INF/=META-INF/, schema/=schema/, \
 	WEB-INF/xsd=WEB-INF/xsd
+Eclipse-BundleShape: dir
+

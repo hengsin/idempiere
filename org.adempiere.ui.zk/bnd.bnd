@@ -118,3 +118,5 @@ Require-Bundle: zcommon, zel, zhtml, zk, zkbind,\
 	org.idempiere.zk.extra,\
 	org.idempiere.zk.billboard
 Service-Component: OSGI-INF/*.xml
+Eclipse-BundleShape: dir
+
