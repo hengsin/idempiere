@@ -45,3 +45,5 @@ Export-Package: \
 	oauth2/=oauth2/
 Web-ContextPath: /
 Jetty-Environment: ee8
+Eclipse-BundleShape: dir
+

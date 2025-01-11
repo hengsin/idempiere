@@ -15,3 +15,5 @@ Export-Package: org.idempiere.felix.webconsole
 -includeresource: WEB-INF/=WEB-INF/
 Import-Package: \
 	org.adempiere.eclipse.equinox.http.servlet, *
+Eclipse-BundleShape: dir
+
