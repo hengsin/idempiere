@@ -120,4 +120,3 @@ testbin: target/classes
 	"bnd*testsrc folder 'test' is not in the Eclipse build path";\
 	is:=ignore
 
-	
