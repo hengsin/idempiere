@@ -116,5 +116,7 @@ testbin: target/classes
 	org.osgi.framework.bootdelegation="javax.xml,javax.xml.stream,sun.security.ssl,com.intellij.rt.debugger.agent", \
 	osgi.compatibility.bootdelegation=true, \
 	osgi.noShutdown=true
-	
-
+-fixupmessages: \
+	"bnd*testsrc folder 'test' is not in the Eclipse build path";\
+	is:=ignore
+		
