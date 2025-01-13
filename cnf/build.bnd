@@ -119,4 +119,3 @@ testbin: target/classes
 -fixupmessages: \
 	"bnd*testsrc folder 'test' is not in the Eclipse build path";\
 	is:=ignore
-		
