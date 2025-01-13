@@ -37,5 +37,6 @@ Export-Package: \
 	org.zkoss.poi.*
 -fixupmessages: \
 	"Export*has*private references*";\
+        "bnd*testsrc folder 'test' is not in the Eclipse build path";\
 	is:=ignore
 		
