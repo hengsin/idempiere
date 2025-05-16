@@ -95,6 +95,7 @@ public class ConfigurationConsole {
 			if (adminEMail != null && adminEMail.trim().length() > 0)
 			{
 				data.setAdminEMail(adminEMail);
+				writer.println("Set Administrator EMail ["+data.getAdminEMail()+"]");
 			}
 			String error = data.testMail();
 			if (error != null && error.trim().length() > 0)
@@ -110,11 +111,12 @@ public class ConfigurationConsole {
 	}
 
 	private void mailPassword(BufferedReader reader, PrintWriter writer) throws IOException {
-		writer.println("Mail User Password ["+data.getMailPassword()+"]");
+		writer.println("Mail User Password ["+data.getMailPassword()+"]:");
 		String mailPassword = reader.readLine();
 		if (mailPassword != null && mailPassword.trim().length() > 0)
 		{
 			data.setMailPassword(mailPassword);
+			writer.println("Set Mail User Password ["+data.getMailPassword()+"]");
 		}
 	}
 
@@ -124,6 +126,7 @@ public class ConfigurationConsole {
 		if (userName != null && userName.trim().length() > 0)
 		{
 			data.setMailUser(userName);
+			writer.println("Set Mail User Login ["+data.getMailUser()+"]");
 		}
 	}
 
@@ -133,6 +136,7 @@ public class ConfigurationConsole {
 		if (hostName != null && hostName.trim().length() > 0)
 		{
 			data.setMailServer(hostName);
+			writer.println("Set Mail Server Host Name ["+data.getMailServer()+"]");
 		}
 	}
 
@@ -152,6 +156,7 @@ public class ConfigurationConsole {
 						continue;
 					}
 					data.setDatabasePort(input);
+					writer.println("Set Database Server Port ["+data.getDatabasePort()+"]");
 					break;
 				}
 				catch (NumberFormatException e){
@@ -166,11 +171,12 @@ public class ConfigurationConsole {
 	private void dbSystemPassword(BufferedReader reader, PrintWriter writer) throws IOException {
 		while (true)
 		{
-			writer.println("Database System User Password ["+data.getDatabaseSystemPassword()+"]");
+			writer.println("Database System User Password ["+data.getDatabaseSystemPassword()+"]:");
 			String dbPassword = reader.readLine();
 			if (dbPassword != null && dbPassword.trim().length() > 0)
 			{
 				data.setDatabaseSystemPassword(dbPassword);
+				writer.println("Set Database System User Password ["+data.getDatabaseSystemPassword()+"]");
 			}
 			String error = data.testDatabase(null);
 			if (error != null && error.trim().length() > 0)
@@ -195,6 +201,7 @@ public class ConfigurationConsole {
 		if (dbPassword != null && dbPassword.trim().length() > 0)
 		{
 			data.setDatabasePassword(dbPassword);
+			writer.println("Set Database Password [" + data.getDatabasePassword()+"]");
 		}
 	}
 
@@ -204,6 +211,7 @@ public class ConfigurationConsole {
 		if (dbUser != null && dbUser.trim().length() > 0)
 		{
 			data.setDatabaseUser(dbUser);
+			writer.println("Set Database user ["+data.getDatabaseUser()+"]");
 		}
 	}
 
@@ -213,6 +221,7 @@ public class ConfigurationConsole {
 		if (dbName != null && dbName.trim().length() > 0)
 		{
 			data.setDatabaseName(dbName);
+			writer.println("Set Database Name["+data.getDatabaseName()+"]");
 		}
 	}
 
@@ -222,6 +231,7 @@ public class ConfigurationConsole {
 		if (hostName != null && hostName.trim().length() > 0)
 		{
 			data.setDatabaseServer(hostName);
+			writer.println("Set Database Server Host Name ["+data.getDatabaseServer()+"]");
 		}
 	}
 
@@ -241,6 +251,7 @@ public class ConfigurationConsole {
 						continue;
 					}
 					data.setAppsServerSSLPort(input);
+					writer.println("Set Application Server SSL Port["+data.getAppsServerSSLPort()+"]");
 					String error = data.testAppsServer();
 					if (error != null && error.trim().length() > 0)
 					{
@@ -277,6 +288,7 @@ public class ConfigurationConsole {
 						continue;
 					}
 					data.setAppsServerWebPort(input);
+					writer.println("Set Application Server Web Port ["+data.getAppsServerWebPort()+"]");
 					break;
 				}
 				catch (NumberFormatException e){
@@ -295,6 +307,7 @@ public class ConfigurationConsole {
 		if (hostName != null && hostName.trim().length() > 0)
 		{
 			data.setAppsServer(hostName);
+			writer.println("Set Application Server Host Name ["+data.getAppsServer()+"]");
 		}
 	}
 
@@ -306,6 +319,7 @@ public class ConfigurationConsole {
 			if (password != null && password.trim().length() > 0)
 			{
 				data.setKeyStore(password);
+				writer.println("Set Key Store Password [" + data.getKeyStore() + "]");
 			}
 			else
 			{
@@ -343,6 +357,7 @@ public class ConfigurationConsole {
 				{
 					cn = input;
 					data.updateProperty(ConfigurationData.ADEMPIERE_CERT_CN, input);
+					writer.println("Set (ON) Common Name [" + cn + "]");
 				}
 
 				writer.println("(OU) Organization Unit [" + ou + "]:");
@@ -351,6 +366,7 @@ public class ConfigurationConsole {
 				{
 					ou = input;
 					data.updateProperty(ConfigurationData.ADEMPIERE_CERT_ORG_UNIT, ou);
+					writer.println("Set (OU) Organization Unit [" + ou + "]");
 				}
 
 				writer.println("(O) Organization [" + o + "]:");
@@ -359,6 +375,7 @@ public class ConfigurationConsole {
 				{
 					o = input;
 					data.updateProperty(ConfigurationData.ADEMPIERE_CERT_ORG, o);
+					writer.println("Set (O) Organization [" + o + "]");
 				}
 
 				writer.println("(L) Locale/Town [" + lt + "]:");
@@ -367,6 +384,7 @@ public class ConfigurationConsole {
 				{
 					lt = input;
 					data.updateProperty(ConfigurationData.ADEMPIERE_CERT_LOCATION, lt);
+					writer.println("Set (L) Locale/Town [" + lt + "]");
 				}
 
 				writer.println("(S) State [" + st + "]:");
@@ -375,14 +393,16 @@ public class ConfigurationConsole {
 				{
 					st = input;
 					data.updateProperty(ConfigurationData.ADEMPIERE_CERT_STATE, st);
+					writer.println("Set (S) State [" + st + "]");
 				}
 
-				writer.println("(C) Country (2 Char) [" + country +"]");
+				writer.println("(C) Country (2 Char) [" + country +"]:");
 				input = reader.readLine();
 				if (input != null && input.trim().length() > 0)
 				{
 					country = input;
 					data.updateProperty(ConfigurationData.ADEMPIERE_CERT_COUNTRY, input);
+					writer.println("Set (C) Country (2 Char) [" + country +"]");
 				}
 
 			}
@@ -404,6 +424,7 @@ public class ConfigurationConsole {
 		if (input != null && input.trim().length() > 0)
 		{
 			data.setAdempiereHome(input);
+			writer.println("Set iDempiere Home ["+data.getAdempiereHome()+"]");
 		}
 	}
 
@@ -415,6 +436,7 @@ public class ConfigurationConsole {
 			if (input != null && input.trim().length() > 0)
 			{
 				data.setJavaHome(input);
+				writer.println("Set Java Home ["+data.getJavaHome()+"]");
 			}
 			String error = data.testJava();
 			if (error != null && error.trim().length() > 0)
@@ -432,6 +454,7 @@ public class ConfigurationConsole {
 		if (input != null && input.trim().length() > 0)
 		{
 			data.setJavaOptions(input);
+			writer.println("Set Java Options ["+data.getJavaOptions()+"]");
 		}
 	}
 	
@@ -464,7 +487,6 @@ public class ConfigurationConsole {
 				break;
 			}
 		}
-//		console.writer().println("JVM Type:");
 		for(int i = 0; i < ConfigurationData.DBTYPE.length; i++)
 		{
 			writer.println((i+1)+". "+ConfigurationData.DBTYPE[i]);
@@ -472,7 +494,7 @@ public class ConfigurationConsole {
 
 		while (true)
 		{
-			writer.println("Database Type ["+(dbTypeSelected+1)+"]");
+			writer.println("Database Type ["+(dbTypeSelected+1)+"]:");
 			String input = reader.readLine();
 			try
 			{
@@ -490,6 +512,7 @@ public class ConfigurationConsole {
 					data.dbChanged();
 				data.initDatabase(ConfigurationData.DBTYPE[inputIndex-1]);
 				data.setDatabaseType(ConfigurationData.DBTYPE[inputIndex-1]);
+				writer.println("Database Type ["+ConfigurationData.DBTYPE[inputIndex-1]+"]");
 				break;
 			}
 			catch (NumberFormatException e){
