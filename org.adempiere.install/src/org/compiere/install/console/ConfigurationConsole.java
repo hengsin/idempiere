@@ -88,7 +88,7 @@ public class ConfigurationConsole {
 	}
 
 	private void mailAdmin(BufferedReader reader, PrintWriter writer) throws IOException {
-		while(true)
+		for(int i = 0; i < 3; i++)
 		{
 			writer.println("Administrator EMail ["+data.getAdminEMail()+"]:");
 			String adminEMail = reader.readLine();
@@ -141,7 +141,7 @@ public class ConfigurationConsole {
 	}
 
 	private void dbPort(BufferedReader reader, PrintWriter writer) throws IOException {
-		while (true)
+		for(int i = 0; i < 3; i++)
 		{
 			writer.println("Database Server Port ["+data.getDatabasePort()+"]:");
 			String input = reader.readLine();
@@ -169,7 +169,7 @@ public class ConfigurationConsole {
 	}
 
 	private void dbSystemPassword(BufferedReader reader, PrintWriter writer) throws IOException {
-		while (true)
+		for(int i = 0; i < 3; i++)
 		{
 			writer.println("Database System User Password ["+data.getDatabaseSystemPassword()+"]:");
 			String dbPassword = reader.readLine();
@@ -236,7 +236,7 @@ public class ConfigurationConsole {
 	}
 
 	private void appServerSSLPort(BufferedReader reader, PrintWriter writer) throws IOException {
-		while (true)
+		for(int i = 0; i < 3; i++)
 		{
 			writer.println("Application Server SSL Port["+data.getAppsServerSSLPort()+"]:");
 			String input = reader.readLine();
@@ -273,7 +273,7 @@ public class ConfigurationConsole {
 	}
 
 	private void appServerWebPort(BufferedReader reader, PrintWriter writer) throws IOException {
-		while (true)
+		for(int i = 0; i < 3; i++)
 		{
 			writer.println("Application Server Web Port ["+data.getAppsServerWebPort()+"]:");
 			String input = reader.readLine();
@@ -312,7 +312,7 @@ public class ConfigurationConsole {
 	}
 
 	private void keyStorePass(BufferedReader reader, PrintWriter writer) throws Exception {
-		while (true)
+		for(int i = 0; i < 3; i++)
 		{
 			writer.println("Key Store Password [" + data.getKeyStore() + "]:");
 			String password = reader.readLine();
@@ -429,7 +429,7 @@ public class ConfigurationConsole {
 	}
 
 	private void jvmHome(BufferedReader reader, PrintWriter writer) throws IOException {
-		while (true)
+		for(int i = 0; i < 3; i++)
 		{
 			writer.println("Java Home ["+data.getJavaHome()+"]:");
 			String input = reader.readLine();
@@ -492,7 +492,7 @@ public class ConfigurationConsole {
 			writer.println((i+1)+". "+ConfigurationData.DBTYPE[i]);
 		}
 
-		while (true)
+		for(int i = 0; i < 3; i++)
 		{
 			writer.println("Database Type ["+(dbTypeSelected+1)+"]:");
 			String input = reader.readLine();
