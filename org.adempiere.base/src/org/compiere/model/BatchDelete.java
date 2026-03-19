@@ -237,7 +237,7 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 
 					for (int i = 0; i < results.length; i++) {
 						T po = entry.getValue().get(i).po();
-						po.setupDeleteActionsForTransactionEvent();
+						po.setupDeleteActionsForTransactionEvent(po.get_ID(), po.get_UUID());
 						po.m_idOld = po.get_ID();
 						po.m_IDs[0] = PO.I_ZERO;
 						po.m_attachment = null;
@@ -279,7 +279,7 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 					if (!po.postDelete()) {
 						s_log.warning("postDelete failed");
 					}
-					po.afterPostDelete();
+					po.resetStateAfterDelete();
 				}
 			} else {
 				rollback(trx, internalTrx, savepoint);
