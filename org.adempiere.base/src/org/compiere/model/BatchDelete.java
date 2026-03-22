@@ -35,6 +35,7 @@ import java.util.logging.Level;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Trx;
+import org.compiere.util.TrxEventListener;
 import org.idempiere.db.util.SQLFragment;
 
 /**
@@ -74,6 +75,14 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 		String localTrxName = trxName;
 		if (localTrxName != null) {
 			trx = Trx.get(localTrxName, false);
+			if (trx == null)
+			{
+				// Using a trx that was previously closed or never opened
+				// Creating and starting the transaction right here, but please note
+				// that this is not a good practice
+				trx = Trx.get(localTrxName, true);
+				s_log.severe("Transaction closed or never opened ("+localTrxName+") => starting now --> " + toString());
+			}
 		} else {
 			localTrxName = Trx.createTrxName("BatchDelete");
 			trx = Trx.get(localTrxName, true);
@@ -139,7 +148,14 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 				}
 				// Trees
 				if (po.is_hasCustomTree()) {
-					sql = po.get_deleteTreeSQL(MTree_Base.TREETYPE_CustomTable, false);
+					try {
+						sql = po.get_deleteTreeSQL(MTree_Base.TREETYPE_CustomTable, true);
+					} catch (Exception e) {
+						s_log.log(Level.SEVERE, "get_deleteTreeSQL failed - " + po.toString(), e);
+						s_log.saveError("Error", e.getMessage());
+						allSuccess = false;
+						break;
+					}
 					preDeleteStatements.add(sql);
 				}
 
@@ -168,7 +184,7 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 			}
 
 			// 2. Process delete of dependent records
-			if (preDeletes.size() > 0) {
+			if (!preDeletes.isEmpty()) {
 				BatchDelete<PO> batchDelete = new BatchDelete<>();
 				for (PO po : preDeletes)
 					batchDelete.add(po);
@@ -176,7 +192,7 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 			}
 
 			// 3. Process updates (mostly from setRecordNull)
-			if (allSuccess && updates.size() > 0) {
+			if (allSuccess && !updates.isEmpty()) {
 				BatchUpdate<PO> batchUpdate = new BatchUpdate<>();
 				for(PO po : updates) {
 					batchUpdate.add(po);
@@ -237,16 +253,16 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 
 					for (int i = 0; i < results.length; i++) {
 						T po = entry.getValue().get(i).po();
-						po.setupDeleteActionsForTransactionEvent(po.get_ID(), po.get_UUID());
-						po.m_idOld = po.get_ID();
-						po.m_IDs[0] = PO.I_ZERO;
-						po.m_attachment = null;
-						if (results[i] == Statement.EXECUTE_FAILED) {
+						if (results[i] <= 0) {
 							s_log.warning("Batch execution failed for " + po.toString());
 							allSuccess = false;
 							po.afterDelete(false);
 							break;
 						}
+						po.setupDeleteActionsForTransactionEvent(po.get_ID(), po.get_UUID());
+						po.m_idOld = po.get_ID();
+						po.m_IDs[0] = PO.I_ZERO;
+						po.m_attachment = null;						
 					}
 					if (!allSuccess) {
 						break;
@@ -276,8 +292,29 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 					savepoint = null;
 				}
 				for(T po : deletes) {
-					if (!po.postDelete()) {
-						s_log.warning("postDelete failed");
+					if (internalTrx) 
+					{
+						po.firePostDeleteEvent();
+					}
+					else
+					{
+						Trx trxdel = trx;
+						trxdel.addTrxEventListener(new TrxEventListener() {
+							@Override
+							public void afterRollback(Trx trxdel, boolean success) {
+								trxdel.removeTrxEventListener(this);
+							}
+							@Override
+							public void afterCommit(Trx trxdel, boolean success) {
+								if (success) {
+									po.firePostDeleteEvent();
+								}
+								trxdel.removeTrxEventListener(this);
+							}
+							@Override
+							public void afterClose(Trx trxdel) {
+							}
+						});						
 					}
 					po.resetStateAfterDelete();
 				}
@@ -304,7 +341,9 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 		} else if (savepoint != null) {
 			try {
 				trx.rollback(savepoint);
-			} catch (SQLException e) {}
+			} catch (SQLException e) {
+				s_log.log(Level.FINE, "Rollback to savepoint failed", e);
+			}
 		}
 	}
 

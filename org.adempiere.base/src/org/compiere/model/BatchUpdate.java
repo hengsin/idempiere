@@ -207,7 +207,9 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 			} else if (savepoint != null) {
 				try {
 					trx.rollback(savepoint);
-				} catch (SQLException e1) {}
+				} catch (SQLException e1) {
+					s_log.log(Level.FINE, "Rollback to savepoint failed", e1);
+				}
 				savepoint = null;
 			}
 		} finally {

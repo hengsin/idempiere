@@ -2648,7 +2648,21 @@ public abstract class PO
 			}
 
 			if (!doOrganizationCheckForSave())
+			{
+				if (localTrx != null)
+				{
+					localTrx.rollback();
+				}
+				else if (savepoint != null)
+				{
+					try
+					{
+						trx.rollback(savepoint);
+					} catch (SQLException e1){}
+					savepoint = null;
+				}
 				return false;
+			}
 
 			//	Save
 			if (newRecord)
@@ -3838,7 +3852,7 @@ public abstract class PO
 	 * @param database database type
 	 * @return last AD_ChangeLog_ID
 	 */
-	protected int buildInsertSQL(StringBuilder sqlInsert, boolean withValues, List<Object> params, MSession session,
+	protected final int buildInsertSQL(StringBuilder sqlInsert, boolean withValues, List<Object> params, MSession session,
 			int AD_ChangeLog_ID, boolean generateScriptOnly, String database) {
 		return buildInsertSQL(sqlInsert, withValues, params, session, AD_ChangeLog_ID, generateScriptOnly, database, null);
 	}
@@ -3855,7 +3869,7 @@ public abstract class PO
 	 * @param changeLogBatch batch insert for change log
 	 * @return last AD_ChangeLog_ID
 	 */
-	protected int buildInsertSQL(StringBuilder sqlInsert, boolean withValues, List<Object> params, MSession session,
+	protected final int buildInsertSQL(StringBuilder sqlInsert, boolean withValues, List<Object> params, MSession session,
 			int AD_ChangeLog_ID, boolean generateScriptOnly, String database, BatchInsert<MChangeLog> changeLogBatch) {
 		String tableName = p_info.getTableName();
 		sqlInsert.append("INSERT INTO ");
@@ -4792,10 +4806,11 @@ public abstract class PO
 	}
 
 	/**
-	 * Fire post delete event to notify interested parties that a record has been deleted.<br
-	 * This method is called after the transaction has been committed successfully.
+	 * Fire post delete event to notify interested parties that a record has been deleted.<br/>
+	 * This method is called after the transaction has been committed successfully.<br/>
+	 * Internal use, application should not call this method directly.
 	 */
-	private void firePostDeleteEvent() {
+	protected void firePostDeleteEvent() {
 		if (!postDelete()) {
 			log.warning("postDelete failed");
 		}

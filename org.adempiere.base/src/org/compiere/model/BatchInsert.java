@@ -147,13 +147,6 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 				sqlMap.computeIfAbsent(sqlb.toString(), k -> new ArrayList<>()).add(new BatchElement<>(po, params));
 			}
 
-			// insert change logs
-			if (!changeLogBatch.isEmpty()) {				
-				if (!changeLogBatch.executeBatch(localTrxName)) {
-					allSuccess = false;
-				}
-			}
-
 			// execute batch insert
 			List <T> allProcessed = new ArrayList<>();
 			if (allSuccess) {
@@ -184,6 +177,13 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 						break;
 					}
 					allProcessed.addAll(processed);
+				}
+			}
+
+			// insert change logs
+			if (allSuccess && !changeLogBatch.isEmpty()) {				
+				if (!changeLogBatch.executeBatch(localTrxName)) {
+					allSuccess = false;
 				}
 			}
 
