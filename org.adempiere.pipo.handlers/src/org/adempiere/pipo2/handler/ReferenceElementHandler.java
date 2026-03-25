@@ -30,6 +30,7 @@ import org.adempiere.pipo2.PoExporter;
 import org.adempiere.pipo2.PoFiller;
 import org.adempiere.pipo2.exception.POSaveFailedException;
 import org.compiere.model.I_AD_Reference;
+import org.compiere.model.MPackageImpDetail;
 import org.compiere.model.MReference;
 import org.compiere.model.X_AD_Package_Exp_Detail;
 import org.compiere.model.X_AD_Package_Imp_Detail;
@@ -76,9 +77,9 @@ public class ReferenceElementHandler extends AbstractElementHandler {
 						return;
 					}
 					backupRecord(ctx, impDetail.getAD_Package_Imp_ID(), MReference.Table_Name, mReference);
-					action = "Update";				
+					action = MPackageImpDetail.ACTION_UPDATE;				
 				} else {
-					action = "New";
+					action = MPackageImpDetail.ACTION_INSERT;
 				}
 				if (mReference.save(getTrxName(ctx)) == true) {
 					logImportDetail(ctx, impDetail, 1, mReference.getName(),

@@ -27,6 +27,7 @@ import java.util.logging.Level;
 
 import org.adempiere.util.ServerContext;
 import org.compiere.Adempiere;
+import org.compiere.model.MPackageImp;
 import org.compiere.model.MSession;
 import org.compiere.model.Query;
 import org.compiere.model.ServerStateChangeEvent;
@@ -73,10 +74,10 @@ public class Incremental2PackActivator extends AbstractActivator {
 	}
 
 	private void installPackage() {
-		String where = "Name=? AND PK_Status = 'Completed successfully'";
+		String where = "Name=? AND PK_Status = ?";
 		Query q = new Query(Env.getCtx(), X_AD_Package_Imp.Table_Name,
 				where.toString(), null);
-		q.setParameters(new Object[] { getName() });
+		q.setParameters(new Object[] { getName(), MPackageImp.PACKAGE_STATUS_COMPLETED });
 		List<X_AD_Package_Imp> pkgs = q.list();
 		List<String> installedVersions = new ArrayList<String>();
 		if (pkgs != null && !pkgs.isEmpty()) {
@@ -116,7 +117,7 @@ public class Incremental2PackActivator extends AbstractActivator {
 		}
 		
 		X_AD_Package_Imp firstImp = new Query(Env.getCtx(), X_AD_Package_Imp.Table_Name, "Name=? AND PK_Version=? AND PK_Status=?", null)
-				.setParameters(getName(), "0.0.0", "Completed successfully")
+				.setParameters(getName(), "0.0.0", MPackageImp.PACKAGE_STATUS_COMPLETED)
 				.setClient_ID()
 				.first();
 		if (firstImp == null) {
@@ -128,7 +129,7 @@ public class Incremental2PackActivator extends AbstractActivator {
 				firstImp = new X_AD_Package_Imp(Env.getCtx(), 0, trx.getTrxName());
 				firstImp.setName(getName());
 				firstImp.setPK_Version("0.0.0");
-				firstImp.setPK_Status("Completed successfully");
+				firstImp.setPK_Status(MPackageImp.PACKAGE_STATUS_COMPLETED);
 				firstImp.setProcessed(true);
 				firstImp.saveEx();
 				
@@ -153,7 +154,7 @@ public class Incremental2PackActivator extends AbstractActivator {
 							X_AD_Package_Imp pi = new X_AD_Package_Imp(Env.getCtx(), 0, trx.getTrxName());
 							pi.setName(getName());
 							pi.setPK_Version(entry.version);
-							pi.setPK_Status("Completed successfully");
+							pi.setPK_Status(MPackageImp.PACKAGE_STATUS_COMPLETED);
 							pi.setProcessed(true);
 							pi.saveEx();
 													

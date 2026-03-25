@@ -107,4 +107,6 @@ public interface IEventTopics {
 	/** Called after a process is committed */
 	public static final String POST_PROCESS = "idempiere/postProcess";
 
+	/** Called after a pack in package imp is committed */
+	public static final String POST_PACKIN_PACKAGE_IMP = "idempiere/postPackInPackageImp";
 }

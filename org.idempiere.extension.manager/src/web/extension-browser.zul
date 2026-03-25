@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ZUL structure for Extension Browser Form -->
+<zk>	
+	<borderlayout id="extensionBrowserLayout" hflex="1" vflex="1">
+		<west width="450px" splittable="true" collapsible="true">						
+			<tabbox hflex="1" vflex="1" style="border: none">
+				<tabs>
+					<tab id="repositoryTab" label="Extension Repository" />
+					<tab id="installedTab" label="Installed Extensions" />
+				</tabs>
+				<tabpanels>
+					<tabpanel>
+						<vlayout id="extensionListbox" hflex="1" vflex="1" 
+							style="overflow-y: auto; background-color: white;" />
+					</tabpanel>
+					<tabpanel>
+						<vlayout id="installedListbox" hflex="1" vflex="1" 
+							style="overflow-y: auto; background-color: white;" />
+					</tabpanel>
+				</tabpanels>
+			</tabbox>
+		</west>
+		<center autoscroll="true">
+			<vlayout hflex="1" vflex="1" style="padding: 0; margin: 0;">
+				<div style="padding: 10px; background-color: #f9f9f9; border-bottom: 1px solid #ddd;">
+					<hlayout spacing="10px">
+						<button id="installUpdateButton" label="Install" disabled="true" sclass="btn btn-primary" 
+							use="org.adempiere.webui.component.Button"/>
+						<button id="uninstallButton" label="Uninstall" visible="false" sclass="btn btn-danger" 
+							use="org.adempiere.webui.component.Button"/>
+						<button id="enableDisableButton" label="Disable" visible="false" sclass="btn" 
+							use="org.adempiere.webui.component.Button"/>
+						<!-- Download button is always enabled once a module is selected -->
+						<button id="downloadButton" label="Download (.idext)" disabled="true" sclass="btn"
+							use="org.adempiere.webui.component.Button" />
+						<button id="registryButton" label="Registry" disabled="true" sclass="btn" 
+							use="org.adempiere.webui.component.Button"/>
+					</hlayout>
+				</div>
+				<div id="infoArea" hflex="1" vflex="1" style="overflow: auto;" />
+			</vlayout>
+		</center>
+	</borderlayout>
+</zk>
