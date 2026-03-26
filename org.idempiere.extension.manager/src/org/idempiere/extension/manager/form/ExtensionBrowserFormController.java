@@ -114,7 +114,7 @@ public class ExtensionBrowserFormController implements IFormController {
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Failed to load repository extensions", e);
 			Label emptyLabel = new Label("Error loading extensions: " + e.getMessage());
-			emptyLabel.setStyle("padding: 20px; color: #d9534f; display: block; text-align: center;");
+			emptyLabel.setSclass("error");
 			form.extensionListbox.appendChild(emptyLabel);
 		}
 	}
@@ -124,7 +124,7 @@ public class ExtensionBrowserFormController implements IFormController {
 		List<MExtension> installed = service.getInstalledExtensions();		
 		if (installed.isEmpty()) {
 			Label emptyLabel = new Label("No extensions installed");
-			emptyLabel.setStyle("padding: 20px; color: #888; display: block; text-align: center;");
+			emptyLabel.setSclass("info");
 			form.installedListbox.appendChild(emptyLabel);
 			return;
 		}
@@ -153,17 +153,17 @@ public class ExtensionBrowserFormController implements IFormController {
 		String description = extObj.hasDescription() ? extObj.getDescription() : "";
 		
 		Div item = new Div();
-		item.setStyle("padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;");
+		item.setSclass("item");
 		
 		// Name
 		Label nameLabel = new Label(name);
-		nameLabel.setStyle("font-weight: 600; font-size: 1.1em; color: #333; display: block;");
+		nameLabel.setSclass("name");
 		item.appendChild(nameLabel);
 		
 		// Description
 		if (!description.isEmpty()) {
 			Label descLabel = new Label(description);
-			descLabel.setStyle("display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 5px; color: #666; font-size: 0.9em; line-height: 1.4;");
+			descLabel.setSclass("description");
 			item.appendChild(descLabel);
 		}
 		
@@ -175,14 +175,14 @@ public class ExtensionBrowserFormController implements IFormController {
 			if (extObj.hasCategories()) {
 				for (JsonElement cat : extObj.getCategories()) {
 					Label catTag = new Label(cat.getAsString());
-					catTag.setStyle("background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; margin-right: 6px; border: 1px solid #bbdefb; font-weight: 500;");
+					catTag.setSclass("category");
 					tagsLayout.appendChild(catTag);
 				}
 			}
 			if (extObj.hasTags()) {
 				for (JsonElement tag : extObj.getTags()) {
 					Label tagTag = new Label(tag.getAsString());
-					tagTag.setStyle("background: #f5f5f5; color: #616161; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; margin-right: 6px; border: 1px solid #e0e0e0; font-weight: 500;");
+					tagTag.setSclass("tag");
 					tagsLayout.appendChild(tagTag);
 				}
 			}
@@ -195,13 +195,13 @@ public class ExtensionBrowserFormController implements IFormController {
 
 	private void selectExtension(Div item, ExtensionMetadata extension) {
 		if (selectedItemComponent != null) {
-			selectedItemComponent.setStyle("padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;");
+			selectedItemComponent.setSclass("item");
 		}
 		
 		selectedItemComponent = item;
 		selectedExtension = extension;
 		
-		item.setStyle("padding: 15px 15px 15px 11px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; background-color: #f0f7ff; border-left: 4px solid #007bff;");
+		item.setSclass("item selected");
 		
 		onSelectExtension();
 	}
@@ -306,24 +306,24 @@ public class ExtensionBrowserFormController implements IFormController {
 		String lastUpdated = extension.hasReleaseDate() ? extension.getReleaseDate() : "";
 		
 		StringBuilder sb = new StringBuilder();
-		sb.append("<aside style=\"width: 280px; flex-shrink: 0; background-color: #f8f9fa; border-left: 1px solid #e9ecef; padding: 20px; font-family: sans-serif; height: 100%; box-sizing: border-box; overflow-y: auto;\">");
+		sb.append("<aside class=\"sidebar\">");
 		
 		// Installation section
-		sb.append("<section style=\"margin-bottom: 25px;\">");
-		sb.append("<h3 style=\"margin-top: 0; margin-bottom: 15px; font-size: 1.1em; color: #212529; border-bottom: 2px solid #dee2e6; padding-bottom: 5px;\">Installation</h3>");
-		sb.append("<div style=\"margin-bottom: 10px;\"><label style=\"display: block; font-size: 0.85em; color: #6c757d; margin-bottom: 2px;\">ID</label><code style=\"padding: 2px 0px; font-size: 0.9em;\">").append(id).append("</code></div>");
-		sb.append("<div style=\"margin-bottom: 10px;\"><label style=\"display: block; font-size: 0.85em; color: #6c757d; margin-bottom: 2px;\">Version</label><span style=\"font-weight: 500;\">").append(version).append("</span></div>");
-		sb.append("<div><label style=\"display: block; font-size: 0.85em; color: #6c757d; margin-bottom: 2px;\">Last Updated</label><span>").append(lastUpdated).append("</span></div>");
+		sb.append("<section>");
+		sb.append("<h3>Installation</h3>");
+		sb.append("<div><label>ID</label><code>").append(id).append("</code></div>");
+		sb.append("<div><label>Version</label><span>").append(version).append("</span></div>");
+		sb.append("<div><label>Last Updated</label><span>").append(lastUpdated).append("</span></div>");
 		sb.append("</section>");
 		
 		// Categories section
 		if (extension.hasCategories()) {
-			sb.append("<section style=\"margin-bottom: 25px;\">");
-			sb.append("<h3 style=\"margin-bottom: 15px; font-size: 1.1em; color: #212529; border-bottom: 2px solid #dee2e6; padding-bottom: 5px;\">Categories</h3>");
-			sb.append("<ul style=\"list-style: none; padding: 0; margin: 0;\">");
+			sb.append("<section>");
+			sb.append("<h3>Categories</h3>");
+			sb.append("<ul>");
 			JsonArray categories = extension.getCategories();
 			for (JsonElement cat : categories) {
-				sb.append("<li style=\"margin-bottom: 6px; display: flex; align-items: center;\"><span style=\"width: 6px; height: 6px; background: #007bff; border-radius: 50%; margin-right: 10px;\"></span>").append(cat.getAsString()).append("</li>");
+				sb.append("<li><span></span>").append(cat.getAsString()).append("</li>");
 			}
 			sb.append("</ul></section>");
 		}
@@ -331,11 +331,11 @@ public class ExtensionBrowserFormController implements IFormController {
 		// Tags section
 		if (extension.hasTags()) {
 			sb.append("<section>");
-			sb.append("<h3 style=\"margin-bottom: 15px; font-size: 1.1em; color: #212529; border-bottom: 2px solid #dee2e6; padding-bottom: 5px;\">Tags</h3>");
-			sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 6px;\">");
+			sb.append("<h3>Tags</h3>");
+			sb.append("<div class=\"tags\">");
 			JsonArray tags = extension.getTags();
 			for (JsonElement tag : tags) {
-				sb.append("<span style=\"background: #fff; color: #495057; border: 1px solid #ced4da; padding: 2px 10px; border-radius: 15px; font-size: 0.8em; font-weight: 500;\">")
+				sb.append("<span class=\"tag\">")
 				  .append(tag.getAsString()).append("</span>");
 			}
 			sb.append("</div></section>");
