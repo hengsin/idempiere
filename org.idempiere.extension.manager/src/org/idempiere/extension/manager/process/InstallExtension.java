@@ -38,6 +38,7 @@ import org.compiere.model.MExtension;
 import org.compiere.model.Query;
 import org.compiere.process.SvrProcess;
 import org.compiere.util.Env;
+import org.compiere.util.Msg;
 import org.idempiere.extension.manager.ExtensionManagerActivator;
 import org.idempiere.extension.manager.event.PackageImpDelegate;
 import org.idempiere.extension.manager.form.ExtensionBrowserService;
@@ -67,7 +68,7 @@ public class InstallExtension extends SvrProcess {
 	protected String doIt() throws Exception {
 		MExtension extension = new MExtension(Env.getCtx(), getRecord_ID(), get_TrxName());
 		if (extension.getAD_Extension_ID() != getRecord_ID() || getRecord_ID() == 0) {
-			throw new AdempiereException("Extension Record Id is required");
+			throw new AdempiereException(Msg.getMsg(Env.getCtx(), "FillMandatory") + Msg.getElement(Env.getCtx(), "AD_Extension_ID"));
 		}
 		
 		HttpClient httpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build();		
@@ -75,13 +76,14 @@ public class InstallExtension extends SvrProcess {
 		
 		// Validate Required Fields
 		if (!metadata.has("id") || !metadata.has("version") || !metadata.has("idempiereVersion") 
-				|| !metadata.has("bundles") || !metadata.has("entityType")) {
-			throw new AdempiereException("metadata.json is missing required fields (id, version, idempiereVersion, bundles, entityType)");
+				|| !metadata.has("name") || !metadata.has("bundles") || !metadata.has("entityType")) {
+			throw new AdempiereException("metadata.json is missing required fields (id, name, version, idempiereVersion, bundles, entityType)");
 		}
 		
 		JsonArray bundlesJson = metadata.getAsJsonArray("bundles");
 		if (bundlesJson.size() == 0) {
-			throw new AdempiereException("No bundles found in metadata.json");
+			//No bundles found in metadata.json
+			throw new AdempiereException(Msg.getMsg(Env.getCtx(), "NoBundlesInExtensionMetadata")); 
 		}
 		
 		// Compatibility Check
@@ -90,7 +92,8 @@ public class InstallExtension extends SvrProcess {
 		String currentVersion = org.compiere.Adempiere.getVersion();
 		Version currentVersionObj = Version.parseVersion(currentVersion);
 		if (currentVersionObj.compareTo(requiredVersionObj) < 0) {
-			throw new AdempiereException("Incompatible iDempiere version. Extension requires " + requiredVersion + " but current version is " + currentVersion);
+			//Incompatible iDempiere version. Extension requires {0} and above but current version is {1}"
+			throw new AdempiereException(Msg.getMsg(Env.getCtx(), "IncompatibleIdempiereVersion", new Object[] { requiredVersion, currentVersion }));
 		}
 		
 		ExtensionBrowserService service = new ExtensionBrowserService();
@@ -117,19 +120,21 @@ public class InstallExtension extends SvrProcess {
 						.first();
 				
 				if (depExt == null || !MExtension.EXTENSIONSTATE_Installed.equals(depExt.getExtensionState())) {
-					throw new AdempiereException("Missing dependency: " + depId + ". Please install it first.");
+					//Missing dependency: {0}. Please install it first
+					throw new AdempiereException(Msg.getMsg(Env.getCtx(), "MissingDependency", new Object[] {depId}));
 				}
 				
 				Version installedDepVersion = Version.parseVersion(depExt.getExtensionVersion());
 				if (installedDepVersion.compareTo(depVersion) < 0) {
-					throw new AdempiereException("Incompatible dependency version: " + depId + ". Required " + depVersionStr + " but installed " + depExt.getExtensionVersion());
+					//Incompatible dependency version: {0}. Required {1} and above but installed {2}
+					throw new AdempiereException(Msg.getMsg(Env.getCtx(), "IncompatibleDependencyVersion", new Object[] {depId, depVersionStr, depExt.getExtensionVersion()}));
 				}
 			}
 		}
 		
 		BundleContext context = ExtensionManagerActivator.context;
 		if (context == null) {
-			throw new AdempiereException("OSGi BundleContext is not available (MyActivator.context is null)");
+			throw new AdempiereException(Msg.getMsg(Env.getCtx(), "BundleContextNotFound"));
 		}
 		
 		List<Bundle> installedBundles = new ArrayList<>();
@@ -138,7 +143,8 @@ public class InstallExtension extends SvrProcess {
 		for (JsonElement el : bundlesJson) {
 			JsonObject bundleObj = el.getAsJsonObject();
 			if (!bundleObj.has("downloadUrl")) {
-				throw new AdempiereException("Bundle is missing downloadUrl");
+				//Bundle {0} is missing downloadUrl
+				throw new AdempiereException(Msg.getMsg(Env.getCtx(), "BundleNoDownloadURL", new Object[]{bundleObj.get("symbolicName").getAsString()}));
 			}
 			String downloadUrl = bundleObj.get("downloadUrl").getAsString();
 			
@@ -148,14 +154,14 @@ public class InstallExtension extends SvrProcess {
 			}
 		
 			if (processUI != null)
-				processUI.statusUpdate("Downloading bundle from " + downloadUrl);
+				processUI.statusUpdate(Msg.getMsg(Env.getCtx(), "DownloadingBundleFrom", new Object[]{bundleObj.get("symbolicName").getAsString(), downloadUrl}));
 
 			addLog("Downloading bundle from " + downloadUrl);
 			HttpRequest jarRequest = HttpRequest.newBuilder().uri(URI.create(downloadUrl)).GET().build();
 			HttpResponse<InputStream> jarResponse = httpClient.send(jarRequest, HttpResponse.BodyHandlers.ofInputStream());
 			
 			if (jarResponse.statusCode() != 200) {
-				throw new AdempiereException("Failed to download bundle from " + downloadUrl + " - HTTP " + jarResponse.statusCode());
+				throw new AdempiereException(Msg.getMsg(Env.getCtx(), "HttpFetchFailed", new Object[]{jarResponse.statusCode(), downloadUrl}));
 			}
 			
 			File tempZip = File.createTempFile("extbundle_", ".jar");
@@ -169,7 +175,8 @@ public class InstallExtension extends SvrProcess {
 				String actualSha256 = calculateSHA256(tempZip);
 				if (!expectedSha256.equalsIgnoreCase(actualSha256)) {
 					tempZip.delete();
-					throw new AdempiereException("SHA256 hash mismatch for bundle " + downloadUrl + ". Expected " + expectedSha256 + " but got " + actualSha256);
+					//BundleSHA256HashNotMatch SHA256 hash mismatch for bundle {0}. Expected {1} but got {2}
+					throw new AdempiereException(Msg.getMsg(Env.getCtx(), "BundleSHA256HashNotMatch", new Object[]{downloadUrl, expectedSha256, actualSha256}));
 				}
 			}
 			
@@ -198,7 +205,7 @@ public class InstallExtension extends SvrProcess {
 			bundle.start();			
 		}
 		
-		return "@OK@ Installed " + installedBundles.size() + " bundles successfully.";
+		return "@ExtensionInstallSuccessfully@";
 	}
 	
 	private String calculateSHA256(File file) throws Exception {

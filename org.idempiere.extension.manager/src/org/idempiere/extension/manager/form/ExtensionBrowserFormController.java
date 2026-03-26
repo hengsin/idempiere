@@ -38,6 +38,7 @@ import org.compiere.model.Query;
 import org.compiere.process.ProcessInfo;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
+import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.idempiere.extension.manager.process.InstallExtension;
@@ -83,14 +84,12 @@ public class ExtensionBrowserFormController implements IFormController {
 		form = new ExtensionBrowserForm();
 		service = new ExtensionBrowserService();
 		Selectors.wireEventListeners(form, this);
-
 		
 		form.addEventListener("onBuildArchive", ev -> buildArchive((ExtensionMetadata) ev.getData()));
 		form.addEventListener("onRunInstall", this::onRunInstall);
 		
 		loadRepositoryExtensions();
 		loadInstalledExtensions();
-		form.repositoryTab.focus();
 	}
 
 	@Override
@@ -113,7 +112,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			}
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Failed to load repository extensions", e);
-			Label emptyLabel = new Label("Error loading extensions: " + e.getMessage());
+			Label emptyLabel = new Label(Msg.getMsg(Env.getCtx(), "ErrorLoadingExtensions", new Object[]{e.getMessage()})); //Error loading extensions: {0}
 			emptyLabel.setSclass("error");
 			form.extensionListbox.appendChild(emptyLabel);
 		}
@@ -123,7 +122,7 @@ public class ExtensionBrowserFormController implements IFormController {
 		form.installedListbox.getChildren().clear();
 		List<MExtension> installed = service.getInstalledExtensions();		
 		if (installed.isEmpty()) {
-			Label emptyLabel = new Label("No extensions installed");
+			Label emptyLabel = new Label(Msg.getMsg(Env.getCtx(), "NoExtensionsInstalled")); //No extensions installed
 			emptyLabel.setSclass("info");
 			form.installedListbox.appendChild(emptyLabel);
 			return;
@@ -238,7 +237,7 @@ public class ExtensionBrowserFormController implements IFormController {
 		boolean hasContent = false;
 		// Details Tab
 		if (extension.hasInfoUrl()) {
-			Tab tab = new Tab("Details");
+			Tab tab = new Tab(Msg.getMsg(Env.getCtx(), "ExtensionDetails")); //Details
 			tabs.appendChild(tab);
 			Tabpanel panel = new Tabpanel();
 			panel.setStyle("overflow: auto; padding: 20px;");
@@ -252,7 +251,7 @@ public class ExtensionBrowserFormController implements IFormController {
 
 		// Changelog Tab
 		if (extension.hasChangeLogUrl()) {
-			Tab tab = new Tab("Changelog");
+			Tab tab = new Tab(Msg.getMsg(Env.getCtx(), "ExtensionChangeLog")); //Changelog
 			tabs.appendChild(tab);
 			Tabpanel panel = new Tabpanel();
 			panel.setStyle("overflow: auto; padding: 20px;");
@@ -287,7 +286,7 @@ public class ExtensionBrowserFormController implements IFormController {
 	 */
 	private void resetInfoArea() {
 		form.installUpdateButton.setDisabled(true);
-		form.installUpdateButton.setLabel("Install");
+		form.installUpdateButton.setLabel(Msg.getMsg(Env.getCtx(), "Install"));
 		form.uninstallButton.setVisible(false);
 		form.enableDisableButton.setVisible(false);
 		form.downloadButton.setDisabled(true);
@@ -312,14 +311,14 @@ public class ExtensionBrowserFormController implements IFormController {
 		sb.append("<section>");
 		sb.append("<h3>Installation</h3>");
 		sb.append("<div><label>ID</label><code>").append(id).append("</code></div>");
-		sb.append("<div><label>Version</label><span>").append(version).append("</span></div>");
-		sb.append("<div><label>Last Updated</label><span>").append(lastUpdated).append("</span></div>");
+		sb.append("<div><label>%s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Version"))).append(version).append("</span></div>");
+		sb.append("<div><label>%s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Updated"))).append(lastUpdated).append("</span></div>");
 		sb.append("</section>");
 		
 		// Categories section
 		if (extension.hasCategories()) {
 			sb.append("<section>");
-			sb.append("<h3>Categories</h3>");
+			sb.append("<h3>%s</h3>".formatted(Msg.getMsg(Env.getCtx(), "ExtensionCategories"))); //Categories
 			sb.append("<ul>");
 			JsonArray categories = extension.getCategories();
 			for (JsonElement cat : categories) {
@@ -331,7 +330,7 @@ public class ExtensionBrowserFormController implements IFormController {
 		// Tags section
 		if (extension.hasTags()) {
 			sb.append("<section>");
-			sb.append("<h3>Tags</h3>");
+			sb.append("<h3>%s</h3>".formatted(Msg.getMsg(Env.getCtx(), "ExtensionTags"))); //Tags
 			sb.append("<div class=\"tags\">");
 			JsonArray tags = extension.getTags();
 			for (JsonElement tag : tags) {
@@ -378,7 +377,7 @@ public class ExtensionBrowserFormController implements IFormController {
 		}
 
 		if (mExtension == null || MExtension.EXTENSIONSTATE_Uninstalled.equals(mExtension.getExtensionState())) {
-			form.installUpdateButton.setLabel("Install");
+			form.installUpdateButton.setLabel(Msg.getMsg(Env.getCtx(), "Install"));
 			form.installUpdateButton.setVisible(true);
 			form.installUpdateButton.setDisabled(false);
 			form.uninstallButton.setVisible(false);
@@ -389,7 +388,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			Version latestVersion = Version.parseVersion(extension.getVersion());
 			
 			if (installedVersion.compareTo(latestVersion) < 0) {
-				form.installUpdateButton.setLabel("Update");
+				form.installUpdateButton.setLabel(Msg.getMsg(Env.getCtx(), "Update"));
 				form.installUpdateButton.setVisible(true);
 			} else {
 				form.installUpdateButton.setVisible(false);
@@ -402,16 +401,16 @@ public class ExtensionBrowserFormController implements IFormController {
 			// Handle isBundled requirement
 			if (mExtension.isBundled()) {
 				form.uninstallButton.setDisabled(true);
-				form.uninstallButton.setTooltiptext("Bundled extensions cannot be uninstalled");
+				form.uninstallButton.setTooltiptext(Msg.getMsg(Env.getCtx(), "CannotUninstallBundledExtension")); //Bundled extensions cannot be uninstalled
 			} else {
 				form.uninstallButton.setDisabled(false);
 				form.uninstallButton.setTooltiptext("");
 			}
 			
 			if (MExtension.EXTENSIONSTATE_Disabled.equals(mExtension.getExtensionState())) {
-				form.enableDisableButton.setLabel("Enable");
+				form.enableDisableButton.setLabel(Msg.getMsg(Env.getCtx(), "Enable")); //Enable
 			} else {
-				form.enableDisableButton.setLabel("Disable");
+				form.enableDisableButton.setLabel(Msg.getMsg(Env.getCtx(), "Disable")); //Disable
 			}
 		}
 		
@@ -437,9 +436,9 @@ public class ExtensionBrowserFormController implements IFormController {
 		ExtensionMetadata extension = selectedExtension;
 		String label = form.installUpdateButton.getLabel();
 		
-		if ("Install".equals(label)) {
+		if (Msg.getMsg(Env.getCtx(), "Install").equals(label)) {
 			onInstall();
-		} else if ("Update".equals(label)) {
+		} else if (Msg.getMsg(Env.getCtx(), "Update").equals(label)) {
 			onUpdate(extension);
 		}
 	}
@@ -452,16 +451,18 @@ public class ExtensionBrowserFormController implements IFormController {
 		try {
 			service.uninstallExtension(extension);
 			
-			Clients.showNotification("Extension uninstalled", "info", form.infoArea, "top_left", 5000);
+			showNotification("Extension uninstalled", "info");
 			loadInstalledExtensions();
 			updateButtons(extension);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Uninstall failed", e);
-			Clients.showNotification("Uninstall failed: " + e.getMessage(), "error", form.infoArea, "top_left", 5000);
+			showNotification("Uninstall failed: " + e.getMessage(), "error");
 		}
 	}
 
-
+	private void showNotification(String message, String type) {
+		Clients.showNotification(message, type, form.infoArea, "top_left", 5000);
+	}
 
 	@Listen("onClick=#enableDisableButton")
 	public void onEnableDisable() {
@@ -486,7 +487,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			onInstall();
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Update cleanup failed", e);
-			Clients.showNotification("Update initialization failed: " + e.getMessage(), "error", form.infoArea, "top_left", 5000);
+			showNotification("Update initialization failed: " + e.getMessage(), "error");
 		}
 	}
 
@@ -509,11 +510,11 @@ public class ExtensionBrowserFormController implements IFormController {
 			pi.setTable_ID(mExtension.get_Table_ID());
 			pi.setRecord_ID(mExtension.getAD_Extension_ID());
 			
-			Clients.showBusy(form, "Initializing installation...");
+			Clients.showBusy(form, Msg.getMsg(Env.getCtx(), "Processing"));
 			Events.echoEvent("onRunInstall", form, pi);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Failed to initialize installation", e);
-			Clients.showNotification("Error: " + e.getMessage(), "error", form.infoArea, "top_left", 5000);
+			showNotification("Error: " + e.getMessage(), "error");
 		}
 	}
 
@@ -533,7 +534,7 @@ public class ExtensionBrowserFormController implements IFormController {
 							updateButtons(selectedExtension);
 						}
 						loadInstalledExtensions();
-						Clients.showNotification(pi.getSummary(), "info", form.infoArea, "top_left", 5000);
+						showNotification(pi.getSummary(), "info");
 					} else {
 						handleInstallationFailure(pi.getSummary());
 					}
@@ -553,7 +554,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			loadInstalledExtensions();
 			updateButtons(selectedExtension);
 		}
-		Clients.showNotification("Installation failed: " + summary, "error", form.infoArea, "top_left", 5000);
+		showNotification("Installation failed: " + summary, "error");
 	}
 
 	/**
@@ -563,12 +564,12 @@ public class ExtensionBrowserFormController implements IFormController {
 	private void onDisable(ExtensionMetadata extension) {
 		try {
 			service.disableExtension(extension);
-			Clients.showNotification("Extension disabled", "info", form.infoArea, "top_left", 5000);
+			showNotification("Extension disabled", "info");
 			loadInstalledExtensions();
 			updateButtons(extension);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Disable failed", e);
-			Clients.showNotification("Disable failed: " + e.getMessage(), "error", form.infoArea, "top_left", 5000);
+			showNotification("Disable failed: " + e.getMessage(), "error");
 		}
 	}
 
@@ -579,12 +580,12 @@ public class ExtensionBrowserFormController implements IFormController {
 	private void onEnable(ExtensionMetadata extension) {
 		try {
 			service.enableExtension(extension);
-			Clients.showNotification("Extension enabled", "info", form.infoArea, "top_left", 5000);
+			showNotification("Extension enabled", "info");
 			loadInstalledExtensions();
 			updateButtons(extension);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Enable failed", e);
-			Clients.showNotification("Enable failed: " + e.getMessage(), "error", form.infoArea, "top_left", 5000);
+			showNotification("Enable failed: " + e.getMessage(), "error");
 		}
 	}
 
@@ -593,7 +594,7 @@ public class ExtensionBrowserFormController implements IFormController {
 		if (selectedExtension == null) return;
 		
 		ExtensionMetadata extension = selectedExtension;
-		Clients.showBusy(form, "Downloading .idext archive...");
+		Clients.showBusy(form, Msg.getMsg(Env.getCtx(), "Processing"));
 		Events.echoEvent("onBuildArchive", form, extension);
 	}
 
@@ -609,7 +610,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			Filedownload.save(media);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Failed to build archive", e);
-			Clients.showNotification("Failed to build archive: " + e.getMessage(), "error", form.infoArea, "top_left", 5000);
+			showNotification("Failed to build archive: " + e.getMessage(), "error");
 		} finally {
 			Clients.clearBusy(form);
 		}

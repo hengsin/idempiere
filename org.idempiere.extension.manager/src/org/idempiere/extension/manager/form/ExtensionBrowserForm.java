@@ -21,9 +21,13 @@
  **********************************************************************/
 package org.idempiere.extension.manager.form;
 
+import java.util.HashMap;
+
 import org.adempiere.webui.component.Button;
 import org.zkoss.zul.Vlayout;
 import org.adempiere.webui.panel.CustomForm;
+import org.compiere.util.Env;
+import org.compiere.util.Msg;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.select.Selectors;
@@ -60,11 +64,19 @@ public class ExtensionBrowserForm extends CustomForm {
 	protected Tab installedTab;
 
 	public ExtensionBrowserForm() {
+		HashMap<String, Object> arguments = new HashMap<>();
+		arguments.put("install", Msg.getMsg(Env.getCtx(), "Install"));
+		arguments.put("uninstall", Msg.getMsg(Env.getCtx(), "Uninstall"));
+		arguments.put("disable", Msg.getMsg(Env.getCtx(), "Disable")); //Disable
+		arguments.put("download", Msg.getMsg(Env.getCtx(), "ExtensionDownloadArchive")); //Download (.idext)
+		arguments.put("registry", Msg.getMsg(Env.getCtx(), "ExtensionRegistryButton")); //Registry
+		arguments.put("repository", Msg.getMsg(Env.getCtx(), "ExtensionRepository")); //Extension Repository
+		arguments.put("installed", Msg.getMsg(Env.getCtx(), "InstalledExtensions")); //Installed Extensions
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 		try {
 			Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 			// Load the zul component from the web package
-			Component form = Executions.createComponents("~./extension-browser.zul", this, null);
+			Component form = Executions.createComponents("~./extension-browser.zul", this, arguments);
 			// Wire components annotated with @Wire to this instance
 			Selectors.wireComponents(form, this, false);
 		} finally {

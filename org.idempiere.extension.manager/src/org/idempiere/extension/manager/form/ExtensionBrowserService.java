@@ -51,6 +51,7 @@ import org.compiere.util.CacheMgt;
 import org.compiere.util.DB;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
+import org.compiere.util.Msg;
 import org.idempiere.extension.manager.ExtensionManagerActivator;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.Version;
@@ -77,7 +78,7 @@ public class ExtensionBrowserService {
 	public JsonArray fetchRepositoryExtensions() throws Exception {
 		String repoUrl = SystemProperties.getIDempiereRepositoryUrl();
 		if (repoUrl == null || repoUrl.trim().isEmpty()) {
-			throw new IllegalStateException("iDempiere repository URL is not set");
+			throw new IllegalStateException(Msg.getMsg(Env.getCtx(), "ExtensionRepositoryNotSet")); //iDempiere extension repository URL is not set
 		}
 
 		String indexUrl = toRawGithubURL(repoUrl, "index.json");
@@ -89,7 +90,7 @@ public class ExtensionBrowserService {
 			JsonObject indexObj = JsonParser.parseString(response.body()).getAsJsonObject();
 			return indexObj.getAsJsonArray("extensions");
 		} else {
-			throw new RuntimeException("Http " + response.statusCode() + " fetching index.json");
+			throw new RuntimeException(Msg.getMsg(Env.getCtx(), "HttpFetchFailed", new Object[] {response.statusCode(), "index.json"})); //Http {0} fetching {1}
 		}
 	}
 
@@ -122,7 +123,7 @@ public class ExtensionBrowserService {
 			if (response.statusCode() == 200) {
 				markdown = response.body();
 			} else {
-				throw new Exception("Failed to fetch documentation from " + rawUrl + " (HTTP " + response.statusCode() + ")");
+				throw new Exception(Msg.getMsg(Env.getCtx(), "HttpFetchFailed", new Object[] {response.statusCode(), rawUrl})); //Http {0} fetching {1}
 			}
 			
 			IMarkdownRenderer renderer = Core.getMarkdownRenderer();
@@ -134,7 +135,7 @@ public class ExtensionBrowserService {
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Failed to fetch or render documentation from " + rawUrl, e);
 			return "<div style=\"padding: 20px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;\">" +
-					"<h4>Error Loading Documentation</h4><p>" + e.getMessage() + "</p></div>";
+					"<h4>%s</h4><p>" + e.getMessage() + "</p></div>".formatted(Msg.getMsg(Env.getCtx(), "Error"));
 		}
 	}
 
@@ -219,7 +220,7 @@ public class ExtensionBrowserService {
 				break;
 		}
 		if (dbObject == null)
-			return DB.getDatabase().getName() + " not supported";
+			return Msg.getMsg(Env.getCtx(), "DatabaseTypeNotSupported", new Object[] {DB.getDatabase().getName()}); //Database {0} not supported
 		
 		//validate version
 		if (dbObject.has("version")) {
@@ -229,7 +230,8 @@ public class ExtensionBrowserService {
 			Version requiredVersion = Version.parseVersion(version);
 			Version currentVersion = Version.parseVersion(fullVersion.indexOf(" ") > 0 ? fullVersion.substring(0, fullVersion.indexOf(" ")) : fullVersion);
 			if (currentVersion.compareTo(requiredVersion) < 0)
-				return DB.getDatabase().getName() + " version " + currentVersion + " is too old, " + requiredVersion + " and above is required";
+				//{0} version {1} is too old, {2} and above is required
+				return Msg.getMsg(Env.getCtx(), "DatabaseVersionTooOld", new Object[] {DB.getDatabase().getName(), currentVersion, requiredVersion});
 		}
 
 		//validate PostgreSQL extensions
@@ -239,7 +241,8 @@ public class ExtensionBrowserService {
 				String dbExtensionName = el.getAsString();
 				int count = DB.getSQLValue(null, "SELECT count(*) FROM pg_available_extensions WHERE name = ?", dbExtensionName.trim());
 				if (count == 0)
-					return "The required extension '" + dbExtensionName + "' is not found on this PostgreSQL server";
+					//The required extension {0} is not found on this {1} server
+					return Msg.getMsg(Env.getCtx(), "DatabaseExtensionNotFound", new Object[] {dbExtensionName, DB.getDatabase().getName()});
 			}
 		}
 
@@ -537,7 +540,7 @@ public class ExtensionBrowserService {
 				.setOnlyActiveRecords(true)
 				.first();
 		if (mExtension != null && MExtension.EXTENSIONSTATE_Installing.equals(mExtension.getExtensionState())) {
-			throw new IllegalStateException("Extension is already being installed");
+			throw new IllegalStateException(Msg.getMsg(Env.getCtx(), "ExtensionAlreadyInstalling")); //Extension is already being installed
 		}
 		
 		// Version check and bundles cleanup
@@ -552,7 +555,7 @@ public class ExtensionBrowserService {
 						if (symbolicName.equals(bundle.getSymbolicName())) {
 							Version currentVersion = bundle.getVersion();
 							if (currentVersion != null && currentVersion.compareTo(newVersion) > 0) {
-								throw new IllegalStateException("A newer version of bundle " + symbolicName + " (" + currentVersion + ") is already installed.");
+								throw new IllegalStateException(Msg.getMsg(Env.getCtx(), "ExtensionBundleNewerVersionInstalled", new Object[] {symbolicName, currentVersion})); //A newer version of bundle {0} ({1}) is already installed
 							}
 							// If exists and is not newer, uninstall it
 							try {
