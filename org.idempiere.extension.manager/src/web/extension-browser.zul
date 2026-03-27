@@ -84,12 +84,28 @@
 				background: #fff; color: #495057; border: 1px solid #ced4da; padding: 2px 10px; 
 				border-radius: 15px; font-size: 0.8em; font-weight: 500;
 			}
+			.filter-box {
+				padding: 10px; border-bottom: 1px solid #ddd; background-color: #f9f9f9;
+			}
+			.filter-box .z-textbox {
+				border-radius: 4px 0 0 4px; border-right: none;
+			}
+			.filter-box .z-button {
+				border-radius: 0 4px 4px 0; padding: 3px 12px;
+			}
 		}
 	</n:style>
 	<borderlayout id="extensionBrowserLayout" hflex="1" vflex="1">
-		<west width="450px" splittable="true" collapsible="true">						
-			<tabbox hflex="1" vflex="1" style="border: none">
-				<tabs>
+		<west width="450px" splittable="true" collapsible="true">
+			<vlayout hflex="1" vflex="1" spacing="0">
+				<div sclass="filter-box">
+					<hlayout spacing="0" hflex="1">
+						<textbox id="filterInput" hflex="1" placeholder="${arg.filterPlaceholderText}" />
+						<button id="filterButton" iconSclass="z-icon-search" />
+					</hlayout>
+				</div>
+				<tabbox hflex="1" vflex="1" style="border: none">
+					<tabs>
 					<tab id="repositoryTab" label="${arg.repository}" />
 					<tab id="installedTab" label="${arg.installed}" />
 				</tabs>
@@ -103,7 +119,8 @@
 							sclass="extensions" />
 					</tabpanel>
 				</tabpanels>
-			</tabbox>
+				</tabbox>
+			</vlayout>
 		</west>
 		<center autoscroll="true">
 			<vlayout hflex="1" vflex="1" sclass="extension">

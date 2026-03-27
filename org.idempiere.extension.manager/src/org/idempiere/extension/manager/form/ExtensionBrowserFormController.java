@@ -79,6 +79,8 @@ public class ExtensionBrowserFormController implements IFormController {
 	private ExtensionMetadata selectedExtension;
 	private Div selectedItemComponent;
 	private ExtensionBrowserService service;
+	private List<ExtensionMetadata> allRepositoryExtensions;
+	private List<ExtensionMetadata> allInstalledExtensions;
 
 	public ExtensionBrowserFormController() {
 		form = new ExtensionBrowserForm();
@@ -110,6 +112,7 @@ public class ExtensionBrowserFormController implements IFormController {
 				renderExtensionItem(form.extensionListbox, extObj, true);
 				extensionMap.put(id, extObj);
 			}
+			allRepositoryExtensions = new java.util.ArrayList<>(extensionMap.values());
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Failed to load repository extensions", e);
 			Label emptyLabel = new Label(Msg.getMsg(Env.getCtx(), "ErrorLoadingExtensions", new Object[]{e.getMessage()})); //Error loading extensions: {0}
@@ -128,11 +131,13 @@ public class ExtensionBrowserFormController implements IFormController {
 			return;
 		}
 
+		allInstalledExtensions = new java.util.ArrayList<>();
 		for (MExtension ext : installed) {
 			String metadataStr = ext.getExtensionMetadata();
 			if (!Util.isEmpty(metadataStr, true)) {
 				try {
 					ExtensionMetadata metadata = new ExtensionMetadata(JsonParser.parseString(metadataStr).getAsJsonObject());
+					allInstalledExtensions.add(metadata);
 					renderExtensionItem(form.installedListbox, metadata, false);
 				} catch (Exception e) {
 					log.log(Level.WARNING, "Failed to parse metadata for extension: " + ext.getExtensionId(), e);
@@ -421,12 +426,81 @@ public class ExtensionBrowserFormController implements IFormController {
 	public void onSelectRepositoryTab() {
 		resetInfoArea();
 		loadRepositoryExtensions();
+		if (!form.filterInput.getValue().isEmpty()) {
+			onFilter();
+		}
 	}
 
 	@Listen("onSelect=#installedTab")
 	public void onSelectInstalledTab() {
 		resetInfoArea();
-		loadInstalledExtensions();		
+		loadInstalledExtensions();
+		if (!form.filterInput.getValue().isEmpty()) {
+			onFilter();
+		}
+	}
+
+	@Listen("onOK=#filterInput; onClick=#filterButton")
+	public void onFilter() {
+		String filter = form.filterInput.getValue().trim();
+		Vlayout container = form.repositoryTab.isSelected() ? form.extensionListbox : form.installedListbox;
+		List<ExtensionMetadata> allList = form.repositoryTab.isSelected() ? allRepositoryExtensions : allInstalledExtensions;
+		
+		if (allList == null) return;
+		
+		container.getChildren().clear();
+		if (filter.isEmpty()) {
+			for (ExtensionMetadata ext : allList) {
+				renderExtensionItem(container, ext, form.repositoryTab.isSelected());
+			}
+			return;
+		}
+		
+		String filterLower = filter.toLowerCase();
+		boolean filterTag = filterLower.startsWith("tag:");
+		boolean filterCategory = filterLower.startsWith("category:");
+		String searchStr = filterLower;
+		if (filterTag) searchStr = filterLower.substring(4).trim();
+		else if (filterCategory) searchStr = filterLower.substring(9).trim();
+		
+		for (ExtensionMetadata ext : allList) {
+			boolean match = false;
+			if (filterTag) {
+				if (ext.hasTags()) {
+					for (JsonElement tag : ext.getTags()) {
+						if (tag.getAsString().toLowerCase().contains(searchStr)) {
+							match = true;
+							break;
+						}
+					}
+				}
+			} else if (filterCategory) {
+				if (ext.hasCategories()) {
+					for (JsonElement cat : ext.getCategories()) {
+						if (cat.getAsString().toLowerCase().contains(searchStr)) {
+							match = true;
+							break;
+						}
+					}
+				}
+			} else {
+				if (ext.getName() != null && ext.getName().toLowerCase().contains(searchStr)) {
+					match = true;
+				} else if (ext.getDescription() != null && ext.getDescription().toLowerCase().contains(searchStr)) {
+					match = true;
+				}
+			}
+			
+			if (match) {
+				renderExtensionItem(container, ext, form.repositoryTab.isSelected());
+			}
+		}
+		
+		if (container.getChildren().isEmpty()) {
+			Label emptyLabel = new Label(Msg.getMsg(Env.getCtx(), "NoMatchingExtensions")); //No matching extensions found
+			emptyLabel.setSclass("info");
+			container.appendChild(emptyLabel);
+		}
 	}
 
 	@Listen("onClick=#installUpdateButton")

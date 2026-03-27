@@ -46,6 +46,10 @@ public class ExtensionBrowserForm extends CustomForm {
 	protected Vlayout extensionListbox;
 	@Wire("#installedListbox")
 	protected Vlayout installedListbox;
+	@Wire("#filterInput")
+	protected org.zkoss.zul.Textbox filterInput;
+	@Wire("#filterButton")
+	protected org.adempiere.webui.component.Button filterButton;
 	@Wire("#installUpdateButton")
 	protected Button installUpdateButton;
 	@Wire("#uninstallButton")
@@ -72,6 +76,7 @@ public class ExtensionBrowserForm extends CustomForm {
 		arguments.put("registry", Msg.getMsg(Env.getCtx(), "ExtensionRegistryButton")); //Registry
 		arguments.put("repository", Msg.getMsg(Env.getCtx(), "ExtensionRepository")); //Extension Repository
 		arguments.put("installed", Msg.getMsg(Env.getCtx(), "InstalledExtensions")); //Installed Extensions
+		arguments.put("filterPlaceholderText", Msg.getMsg(Env.getCtx(), "ExtensionFilterPlaceHolderText")); //Filter by name, description, tag: or category:
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 		try {
 			Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
