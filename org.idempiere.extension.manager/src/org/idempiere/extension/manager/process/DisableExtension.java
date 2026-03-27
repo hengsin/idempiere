@@ -23,24 +23,19 @@ package org.idempiere.extension.manager.process;
 
 import org.adempiere.base.annotation.Process;
 import org.adempiere.exceptions.AdempiereException;
-import org.adempiere.util.Callback;
 import org.compiere.model.MExtension;
 import org.compiere.process.SvrProcess;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
-import org.idempiere.extension.manager.ExtensionManagerActivator;
 import org.idempiere.extension.manager.form.ExtensionBrowserService;
 import org.idempiere.extension.manager.form.ExtensionMetadata;
-import org.osgi.framework.BundleContext;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+
 import com.google.gson.JsonParser;
 
 @Process
-public class InstallExtension extends SvrProcess {
-	
+public class DisableExtension extends SvrProcess {
 
-	public InstallExtension() {
+	public DisableExtension() {
 	}
 
 	@Override
@@ -49,54 +44,15 @@ public class InstallExtension extends SvrProcess {
 
 	@Override
 	protected String doIt() throws Exception {
-		MExtension extension = new MExtension(Env.getCtx(), getRecord_ID(), null);
+		MExtension extension = new MExtension(Env.getCtx(), getRecord_ID(), get_TrxName());
 		if (extension.getAD_Extension_ID() != getRecord_ID() || getRecord_ID() == 0) {
 			throw new AdempiereException(Msg.getMsg(Env.getCtx(), "FillMandatory") + Msg.getElement(Env.getCtx(), "AD_Extension_ID"));
 		}
 		
-		JsonObject metadata = JsonParser.parseString(extension.getExtensionMetadata()).getAsJsonObject();
-		var extensionMetadata = new ExtensionMetadata(metadata);
-		var service = new ExtensionBrowserService();		
-		
-		// Validate Required Fields
-		if (!extensionMetadata.hasVersion() || !extensionMetadata.hasIDempiereVersion()
-				|| !extensionMetadata.hasName() || !extensionMetadata.hasBundles()) {
-			throw new AdempiereException("metadata.json is missing required fields (name, version, idempiereVersion, bundles)");
-		}
-		
-		JsonArray bundlesJson = extensionMetadata.getBundles();
-		if (bundlesJson.size() == 0) {
-			//No bundles found in metadata.json
-			throw new AdempiereException(Msg.getMsg(Env.getCtx(), "NoBundlesInExtensionMetadata")); 
-		}
-		
-		// Compatibility Check
-		service.validateIDempiereVersion(extensionMetadata);
-		service.validateDependencies(extensionMetadata);
-				
-		String dbError = service.validateDatabaseRequirement(extensionMetadata);
-		if (dbError != null) {
-			throw new AdempiereException(dbError);
-		}
-						
-		BundleContext context = ExtensionManagerActivator.context;
-		if (context == null) {
-			throw new AdempiereException(Msg.getMsg(Env.getCtx(), "BundleContextNotFound"));
-		}
-		
-		if (!extension.getExtensionState().equals(MExtension.EXTENSIONSTATE_Installing)) {
-			extension.setExtensionState(MExtension.EXTENSIONSTATE_Installing);
-			extension.saveEx();
-		}
+		ExtensionMetadata metadata = new ExtensionMetadata(JsonParser.parseString(extension.getExtensionMetadata()).getAsJsonObject());
+		ExtensionBrowserService service = new ExtensionBrowserService();
+		service.disableExtension(metadata);
+		return "@ExtensionDisableSuccessfully@";
+	}
 
-		Callback<String> statusCallback = (msg) -> {
-			if (processUI != null)
-				processUI.statusUpdate(msg);
-			addLog(msg);
-		};
-			
-		service.installExtension(extensionMetadata, statusCallback);
-
-		return "@ExtensionInstallSuccessfully@";
-	}	
 }

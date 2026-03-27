@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.base.event.EventManager;
+import org.adempiere.base.event.IEventTopics;
 import org.adempiere.util.ServerContext;
 import org.compiere.Adempiere;
 import org.compiere.model.MPackageImp;
@@ -39,6 +41,7 @@ import org.compiere.util.CacheMgt;
 import org.compiere.util.Env;
 import org.compiere.util.Trx;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.event.Event;
 
 /**
  * 
@@ -179,15 +182,22 @@ public class Incremental2PackActivator extends AbstractActivator {
 			}
 		});		
 
+		boolean success = true;
 		boolean cacheReset = false;
+		if (!list.isEmpty()) {
+			Event event = EventManager.newEvent(IEventTopics.PRE_INCREMENTAL_PACK_IN, getName(), true);
+			EventManager.getInstance().sendEvent(event);
+		}
 		try {
 			if (getDBLock()) {
 				for(TwoPackEntry entry : list) {
 					if (!installedVersions.contains(entry.version)) {
 						if (packIn(entry.url))
 							cacheReset = true;
-						else
-							break; // stop processing further packages if one fail
+						else {
+							success = false;
+							break; // stop processing further packages if one fail							
+						}
 					}
 				}
 			} else {
@@ -198,7 +208,11 @@ public class Incremental2PackActivator extends AbstractActivator {
 		} finally {
 			releaseLock();
 		}
-		logger.log(Level.INFO, "Cache Reset: " + cacheReset);
+
+		Event event = EventManager.newEvent(IEventTopics.POST_INCREMENTAL_PACK_IN, new Object[] {getName(), success}, true);
+		EventManager.getInstance().postEvent(event);
+		if (logger.isLoggable(Level.INFO))
+			logger.log(Level.INFO, "Cache Reset: " + cacheReset);
 		if (cacheReset)
 			CacheMgt.get().reset();
 	}

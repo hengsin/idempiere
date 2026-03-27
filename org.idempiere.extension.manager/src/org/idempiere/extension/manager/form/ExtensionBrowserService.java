@@ -25,12 +25,15 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.zip.ZipEntry;
@@ -39,6 +42,8 @@ import java.util.concurrent.CompletableFuture;
 
 import org.adempiere.base.Core;
 import org.adempiere.base.markdown.IMarkdownRenderer;
+import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.util.Callback;
 import org.compiere.model.MExtension;
 import org.compiere.model.MExtensionEntity;
 import org.compiere.model.MTable;
@@ -53,6 +58,7 @@ import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.idempiere.extension.manager.ExtensionManagerActivator;
+import org.idempiere.extension.manager.event.PackageImpDelegate;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.Version;
 
@@ -623,4 +629,171 @@ public class ExtensionBrowserService {
 			log.log(Level.WARNING, "Failed to cleanup bundles after installation failure", e);
 		}
 	}
+
+	/**
+	 * Validate dependencies of an extension
+	 * @param metadata
+	 * @throws AdempiereException if validation fail
+	 */
+	public void validateDependencies(ExtensionMetadata metadata) {
+		// Dependency Check
+		if (metadata.hasDependencies()) {
+			JsonArray dependencies = metadata.getDependencies();
+			for (JsonElement depEl : dependencies) {
+				JsonObject depObj = depEl.getAsJsonObject();
+				if (!depObj.has("id") || !depObj.has("version")) {
+					continue;
+				}
+				String depId = depObj.get("id").getAsString();
+				String depVersionStr = depObj.get("version").getAsString();
+				Version depVersion = Version.parseVersion(depVersionStr);
+				
+				MExtension depExt = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
+						.setParameters(depId)
+						.setOnlyActiveRecords(true)
+						.first();
+				
+				if (depExt == null || !MExtension.EXTENSIONSTATE_Installed.equals(depExt.getExtensionState())) {
+					//Missing dependency: {0}. Please install it first
+					throw new AdempiereException(Msg.getMsg(Env.getCtx(), "MissingDependency", new Object[] {depId}));
+				}
+				
+				Version installedDepVersion = Version.parseVersion(depExt.getExtensionVersion());
+				if (installedDepVersion.compareTo(depVersion) < 0) {
+					//Incompatible dependency version: {0}. Required {1} and above but installed {2}
+					throw new AdempiereException(Msg.getMsg(Env.getCtx(), "IncompatibleDependencyVersion", new Object[] {depId, depVersionStr, depExt.getExtensionVersion()}));
+				}
+			}
+		}
+	}
+
+	/**
+	 * Validate iDempiere version compatibility
+	 * @param metadata
+	 * @throws AdempiereException if validation fail
+	 */
+	public void validateIDempiereVersion(ExtensionMetadata metadata) {
+		String requiredVersion = metadata.getIDempiereVersion();
+		Version requiredVersionObj = Version.parseVersion(requiredVersion);		
+		String currentVersion = org.compiere.Adempiere.getVersion();
+		Version currentVersionObj = Version.parseVersion(currentVersion);
+		if (currentVersionObj.compareTo(requiredVersionObj) < 0) {
+			//Incompatible iDempiere version. Extension requires {0} and above but current version is {1}"
+			throw new AdempiereException(Msg.getMsg(Env.getCtx(), "IncompatibleIdempiereVersion", new Object[] { requiredVersion, currentVersion }));
+		}
+	}
+
+	public void installExtension(ExtensionMetadata metadata, Callback<String> statusCallback) throws Exception {
+		List<Bundle> installedBundles = new ArrayList<>();
+				
+		// Download and Install OSGi Bundles
+		for (JsonElement el : metadata.getBundles()) {
+			JsonObject bundleObj = el.getAsJsonObject();
+			if (!bundleObj.has("downloadUrl")) {
+				//Bundle {0} is missing downloadUrl
+				throw new AdempiereException(Msg.getMsg(Env.getCtx(), "BundleNoDownloadURL", new Object[]{bundleObj.get("symbolicName").getAsString()}));
+			}
+			String downloadUrl = bundleObj.get("downloadUrl").getAsString();
+			String symbolicName = bundleObj.get("symbolicName").getAsString();
+			String id = metadata.getId();
+			PackageImpDelegate.addExtension(symbolicName, id);
+			
+			// convert github blob to raw if needed
+			if (downloadUrl.contains("github.com") && downloadUrl.contains("/blob/")) {
+				downloadUrl = downloadUrl.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/");
+			}
+		
+			if (statusCallback != null)
+				statusCallback.onCallback(Msg.getMsg(Env.getCtx(), "DownloadingBundleFrom", new Object[]{bundleObj.get("symbolicName").getAsString(), downloadUrl}));
+
+			HttpRequest jarRequest = HttpRequest.newBuilder().uri(URI.create(downloadUrl)).GET().build();
+			HttpResponse<InputStream> jarResponse = httpClient.send(jarRequest, HttpResponse.BodyHandlers.ofInputStream());
+			
+			if (jarResponse.statusCode() != 200) {
+				throw new AdempiereException(Msg.getMsg(Env.getCtx(), "HttpFetchFailed", new Object[]{jarResponse.statusCode(), downloadUrl}));
+			}
+			
+			File tempZip = File.createTempFile("extbundle_", ".jar");
+			
+			try (InputStream is = jarResponse.body(); FileOutputStream fos = new FileOutputStream(tempZip)) {
+				is.transferTo(fos);
+			}
+			
+			if (bundleObj.has("sha256")) {
+				String expectedSha256 = bundleObj.get("sha256").getAsString();
+				String actualSha256 = calculateSHA256(tempZip);
+				if (!expectedSha256.equalsIgnoreCase(actualSha256)) {
+					tempZip.delete();
+					//BundleSHA256HashNotMatch SHA256 hash mismatch for bundle {0}. Expected {1} but got {2}
+					throw new AdempiereException(Msg.getMsg(Env.getCtx(), "BundleSHA256HashNotMatch", new Object[]{downloadUrl, expectedSha256, actualSha256}));
+				}
+			}
+			
+			if (statusCallback != null)
+				statusCallback.onCallback("Installing bundle from " + downloadUrl);
+			Bundle bundle;
+			try (java.io.FileInputStream fis = new java.io.FileInputStream(tempZip)) {
+				bundle = ExtensionManagerActivator.context.installBundle(downloadUrl, fis);
+			}
+			installedBundles.add(bundle);
+			
+			tempZip.delete();
+		}
+		
+		// Start (Activate) Bundles and Check for 2pack		
+		List<String> twoPackBundles = new ArrayList<>();
+		for (Bundle bundle : installedBundles) {
+			Enumeration<URL> entries = bundle.findEntries("META-INF", "2Pack_*.zip", false);
+			if (entries != null && entries.hasMoreElements()) {
+				twoPackBundles.add(bundle.getSymbolicName());
+			}
+			if (statusCallback != null)
+				statusCallback.onCallback("Starting bundle " + bundle.getSymbolicName());
+			bundle.start();			
+		}
+
+		if (twoPackBundles.size() > 0) {
+			StringBuilder whereBuilder = new StringBuilder("Name IN (");
+			for (int i = 0; i < twoPackBundles.size(); i++) {
+				whereBuilder.append("?");
+				if (i < twoPackBundles.size() - 1) {
+					whereBuilder.append(",");
+				}
+			}
+			whereBuilder.append(") AND PK_Status = ?");
+			List<Object> params = new ArrayList<>(twoPackBundles);
+			params.add(MPackageImp.PACKAGE_STATUS_INSTALLING);
+			Query query = new Query(Env.getCtx(), MPackageImp.Table_Name, whereBuilder.toString(), null)
+					.setParameters(params.toArray());
+			int count = query.count();
+			if (count > 0) {
+				if (statusCallback != null)
+					statusCallback.onCallback("Installing extension data in background...");
+			}
+		}
+
+		handleInstallationSuccess(metadata);
+	}
+
+	private String calculateSHA256(File file) throws Exception {
+		java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+		try (java.io.InputStream is = new java.io.FileInputStream(file)) {
+			byte[] buffer = new byte[8192];
+			int read;
+			while ((read = is.read(buffer)) > 0) {
+				digest.update(buffer, 0, read);
+			}
+		}
+		byte[] hash = digest.digest();
+		StringBuilder hexString = new StringBuilder();
+		for (byte b : hash) {
+			String hex = Integer.toHexString(0xff & b);
+			if (hex.length() == 1) {
+				hexString.append('0');
+			}
+			hexString.append(hex);
+		}
+		return hexString.toString();
+	}
+
 }

@@ -44,8 +44,8 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Trx;
+import org.compiere.util.TrxEventListener;
 import org.compiere.util.Util;
-import org.w3c.dom.events.Event;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
@@ -348,8 +348,32 @@ public class PackInHandler extends DefaultHandler {
     	DB.executeUpdateEx("UPDATE AD_Package_Imp SET Processed=?, PK_Status=?, UpdatedBy=?, Updated=getDate() WHERE AD_Package_Imp_ID=?",
     			new Object[] {"Y", packageStatus, Env.getAD_User_ID(m_ctx.ctx), AD_Package_Imp_ID},
     			trxName);
-		org.osgi.service.event.Event event = EventManager.newEvent(IEventTopics.POST_PACKIN_PACKAGE_IMP, AD_Package_Imp_ID, true);
-		EventManager.getInstance().postEvent(event);
+		Trx trx = Trx.get(trxName, false);
+		if (trx == null) {
+			org.osgi.service.event.Event event = EventManager.newEvent(IEventTopics.POST_PACKIN_PACKAGE_IMP, AD_Package_Imp_ID, true);
+			EventManager.getInstance().postEvent(event);
+		} else {
+			TrxEventListener listener = new TrxEventListener() {
+
+				@Override
+				public void afterCommit(Trx trx, boolean success) {
+					if (success) {
+						org.osgi.service.event.Event event = EventManager.newEvent(IEventTopics.POST_PACKIN_PACKAGE_IMP, AD_Package_Imp_ID, true);
+						EventManager.getInstance().sendEvent(event);
+					}
+				}
+
+				@Override
+				public void afterRollback(Trx trx, boolean success) {
+				}
+
+				@Override
+				public void afterClose(Trx trx) {
+					trx.removeTrxEventListener(this);
+				}				
+			};
+			trx.addTrxEventListener(listener);
+		}
 	}
 
     private void updPackageImpInst(String trxName) {

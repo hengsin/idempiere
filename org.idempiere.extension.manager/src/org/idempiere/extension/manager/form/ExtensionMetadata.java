@@ -67,6 +67,22 @@ public class ExtensionMetadata {
 		return hasVersion() ? json.get("version").getAsString() : null;
 	}
 
+	public boolean hasEntityType() {
+		return json.has("entityType");
+	}
+
+	public String getEntityType() {
+		return hasEntityType() ? json.get("entityType").getAsString() : null;
+	}
+
+	public boolean hasIDempiereVersion() {
+		return json.has("idempiereVersion");
+	}
+
+	public String getIDempiereVersion() {
+		return hasIDempiereVersion() ? json.get("idempiereVersion").getAsString() : null;
+	}
+
 	public boolean hasReleaseDate() {
 		return json.has("releaseDate");
 	}
@@ -123,6 +139,14 @@ public class ExtensionMetadata {
 		return hasAssets() ? json.getAsJsonArray("assets") : new JsonArray();
 	}
 	
+	public boolean hasDependencies() {
+		return json.has("dependencies") && json.get("dependencies").isJsonArray();
+	}
+
+	public JsonArray getDependencies() {
+		return hasDependencies() ? json.getAsJsonArray("dependencies") : new JsonArray();
+	}
+
 	public boolean hasDatabase() {
 		return json.has("database");
 	}

@@ -41,7 +41,10 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
+import org.idempiere.extension.manager.process.DisableExtension;
+import org.idempiere.extension.manager.process.EnableExtension;
 import org.idempiere.extension.manager.process.InstallExtension;
+import org.idempiere.extension.manager.process.UninstallExtension;
 import org.idempiere.ui.zk.annotation.Form;
 
 import org.osgi.framework.Version;
@@ -89,6 +92,9 @@ public class ExtensionBrowserFormController implements IFormController {
 		
 		form.addEventListener("onBuildArchive", ev -> buildArchive((ExtensionMetadata) ev.getData()));
 		form.addEventListener("onRunInstall", this::onRunInstall);
+		form.addEventListener("onRunDisable", this::onRunDisable);
+		form.addEventListener("onRunEnable", this::onRunEnable);
+		form.addEventListener("onRunUninstall", this::onRunUninstall);
 		
 		loadRepositoryExtensions();
 		loadInstalledExtensions();
@@ -522,15 +528,59 @@ public class ExtensionBrowserFormController implements IFormController {
 		if (selectedExtension == null) return;
 		
 		ExtensionMetadata extension = selectedExtension;
+		String extensionId = extension.getId();
+		MExtension mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
+				.setParameters(extensionId)
+				.setOnlyActiveRecords(true)
+				.first();
+		if (mExtension == null) return;
+		
 		try {
-			service.uninstallExtension(extension);
+			MProcess process = new Query(Env.getCtx(), MProcess.Table_Name, "Classname=?", null)
+					.setParameters(UninstallExtension.class.getName())
+					.first();
+			if (process == null)
+				throw new IllegalStateException("UninstallExtension process not found");
+			ProcessInfo pi = new ProcessInfo(process.getName(), process.getAD_Process_ID());
+			pi.setAD_Client_ID(Env.getAD_Client_ID(Env.getCtx()));
+			pi.setAD_User_ID(Env.getAD_User_ID(Env.getCtx()));
+			pi.setTable_ID(mExtension.get_Table_ID());
+			pi.setRecord_ID(mExtension.getAD_Extension_ID());
 			
-			showNotification("Extension uninstalled", "info");
-			loadInstalledExtensions();
-			updateButtons(extension);
+			Clients.showBusy(form, Msg.getMsg(Env.getCtx(), "Processing"));
+			Events.echoEvent("onRunUninstall", form, pi);
+		} catch (Exception e) {
+			log.log(Level.SEVERE, "Failed to initialize uninstallation", e);
+			showNotification(Msg.getMsg(Env.getCtx(), "Error") + e.getMessage(), "error");
+		}
+	}
+
+	/**
+	 * Event handler to run UninstallExtension process
+	 * @param ev
+	 */
+	public void onRunUninstall(Event ev) {
+		ProcessInfo pi = (ProcessInfo) ev.getData();
+		try {
+			Clients.clearBusy();
+			WProcessCtl.process(getForm().getWindowNo(), pi, (Trx)null, e -> {
+				if (ProcessModalDialog.ON_WINDOW_CLOSE.equals(e.getName())){
+					if (!pi.isError()) {
+						if (selectedExtension != null) {
+							updateButtons(selectedExtension);
+						}
+						loadInstalledExtensions();
+						showNotification(pi.getSummary(), "info");
+					} else {
+						showNotification(Msg.getMsg(Env.getCtx(), "Error") + pi.getSummary(), "error");
+					}
+				}
+			});			
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Uninstall failed", e);
-			showNotification("Uninstall failed: " + e.getMessage(), "error");
+			showNotification(Msg.getMsg(Env.getCtx(), "Error") + e.getMessage(), "error");
+		} finally {
+			Clients.clearBusy(form);
 		}
 	}
 
@@ -561,7 +611,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			onInstall();
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Update cleanup failed", e);
-			showNotification("Update initialization failed: " + e.getMessage(), "error");
+			showNotification(Msg.getMsg(Env.getCtx(), "Error") + e.getMessage(), "error");
 		}
 	}
 
@@ -575,7 +625,9 @@ public class ExtensionBrowserFormController implements IFormController {
 
 		try {
 			MExtension mExtension = service.prepareInstall(extension);
-			MProcess process = MProcess.get(InstallExtension.AD_Process_UU);
+			MProcess process = new Query(Env.getCtx(), MProcess.Table_Name, "Classname=?", null)
+					.setParameters(InstallExtension.class.getName())
+					.first();
 			if (process == null)
 				throw new IllegalStateException("InstallExtension process not found");
 			ProcessInfo pi = new ProcessInfo(process.getName(), process.getAD_Process_ID());
@@ -588,7 +640,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			Events.echoEvent("onRunInstall", form, pi);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Failed to initialize installation", e);
-			showNotification("Error: " + e.getMessage(), "error");
+			showNotification(Msg.getMsg(Env.getCtx(), "Error") + e.getMessage(), "error");
 		}
 	}
 
@@ -603,8 +655,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			WProcessCtl.process(getForm().getWindowNo(), pi, (Trx)null, e -> {
 				if (ProcessModalDialog.ON_WINDOW_CLOSE.equals(e.getName())){
 					if (!pi.isError()) {
-						if (selectedExtension != null) {
-							service.handleInstallationSuccess(selectedExtension);
+						if (selectedExtension != null) {							
 							updateButtons(selectedExtension);
 						}
 						loadInstalledExtensions();
@@ -628,7 +679,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			loadInstalledExtensions();
 			updateButtons(selectedExtension);
 		}
-		showNotification("Installation failed: " + summary, "error");
+		showNotification(Msg.getMsg(Env.getCtx(), "Error") + summary, "error");
 	}
 
 	/**
@@ -636,14 +687,59 @@ public class ExtensionBrowserFormController implements IFormController {
 	 * @param extension
 	 */
 	private void onDisable(ExtensionMetadata extension) {
+		String extensionId = extension.getId();
+		MExtension mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
+				.setParameters(extensionId)
+				.setOnlyActiveRecords(true)
+				.first();
+		if (mExtension == null) return;
+		
 		try {
-			service.disableExtension(extension);
-			showNotification("Extension disabled", "info");
-			loadInstalledExtensions();
-			updateButtons(extension);
+			MProcess process = new Query(Env.getCtx(), MProcess.Table_Name, "Classname=?", null)
+					.setParameters(DisableExtension.class.getName())
+					.first();
+			if (process == null)
+				throw new IllegalStateException("DisableExtension process not found");
+			ProcessInfo pi = new ProcessInfo(process.getName(), process.getAD_Process_ID());
+			pi.setAD_Client_ID(Env.getAD_Client_ID(Env.getCtx()));
+			pi.setAD_User_ID(Env.getAD_User_ID(Env.getCtx()));
+			pi.setTable_ID(mExtension.get_Table_ID());
+			pi.setRecord_ID(mExtension.getAD_Extension_ID());
+			
+			Clients.showBusy(form, Msg.getMsg(Env.getCtx(), "Processing"));
+			Events.echoEvent("onRunDisable", form, pi);
+		} catch (Exception e) {
+			log.log(Level.SEVERE, "Failed to initialize disabling", e);
+			showNotification(Msg.getMsg(Env.getCtx(), "Error") + e.getMessage(), "error");
+		}
+	}
+
+	/**
+	 * Event handler to run DisableExtension process
+	 * @param ev
+	 */
+	public void onRunDisable(Event ev) {
+		ProcessInfo pi = (ProcessInfo) ev.getData();
+		try {
+			Clients.clearBusy();
+			WProcessCtl.process(getForm().getWindowNo(), pi, (Trx)null, e -> {
+				if (ProcessModalDialog.ON_WINDOW_CLOSE.equals(e.getName())){
+					if (!pi.isError()) {
+						if (selectedExtension != null) {
+							updateButtons(selectedExtension);
+						}
+						loadInstalledExtensions();
+						showNotification(pi.getSummary(), "info");
+					} else {
+						showNotification(Msg.getMsg(Env.getCtx(), "Error") + pi.getSummary(), "error");
+					}
+				}
+			});			
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Disable failed", e);
-			showNotification("Disable failed: " + e.getMessage(), "error");
+			showNotification(Msg.getMsg(Env.getCtx(), "Error") + e.getMessage(), "error");
+		} finally {
+			Clients.clearBusy(form);
 		}
 	}
 
@@ -652,14 +748,59 @@ public class ExtensionBrowserFormController implements IFormController {
 	 * @param extension
 	 */
 	private void onEnable(ExtensionMetadata extension) {
+		String extensionId = extension.getId();
+		MExtension mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
+				.setParameters(extensionId)
+				.setOnlyActiveRecords(true)
+				.first();
+		if (mExtension == null) return;
+		
 		try {
-			service.enableExtension(extension);
-			showNotification("Extension enabled", "info");
-			loadInstalledExtensions();
-			updateButtons(extension);
+			MProcess process = new Query(Env.getCtx(), MProcess.Table_Name, "Classname=?", null)
+					.setParameters(EnableExtension.class.getName())
+					.first();
+			if (process == null)
+				throw new IllegalStateException("EnableExtension process not found");
+			ProcessInfo pi = new ProcessInfo(process.getName(), process.getAD_Process_ID());
+			pi.setAD_Client_ID(Env.getAD_Client_ID(Env.getCtx()));
+			pi.setAD_User_ID(Env.getAD_User_ID(Env.getCtx()));
+			pi.setTable_ID(mExtension.get_Table_ID());
+			pi.setRecord_ID(mExtension.getAD_Extension_ID());
+			
+			Clients.showBusy(form, Msg.getMsg(Env.getCtx(), "Processing"));
+			Events.echoEvent("onRunEnable", form, pi);
+		} catch (Exception e) {
+			log.log(Level.SEVERE, "Failed to initialize enabling", e);
+			showNotification(Msg.getMsg(Env.getCtx(), "Error") + e.getMessage(), "error");
+		}
+	}
+
+	/**
+	 * Event handler to run EnableExtension process
+	 * @param ev
+	 */
+	public void onRunEnable(Event ev) {
+		ProcessInfo pi = (ProcessInfo) ev.getData();
+		try {
+			Clients.clearBusy();
+			WProcessCtl.process(getForm().getWindowNo(), pi, (Trx)null, e -> {
+				if (ProcessModalDialog.ON_WINDOW_CLOSE.equals(e.getName())){
+					if (!pi.isError()) {
+						if (selectedExtension != null) {
+							updateButtons(selectedExtension);
+						}
+						loadInstalledExtensions();
+						showNotification(pi.getSummary(), "info");
+					} else {
+						showNotification(Msg.getMsg(Env.getCtx(), "Error") + pi.getSummary(), "error");
+					}
+				}
+			});			
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Enable failed", e);
-			showNotification("Enable failed: " + e.getMessage(), "error");
+			showNotification(Msg.getMsg(Env.getCtx(), "Error") + e.getMessage(), "error");
+		} finally {
+			Clients.clearBusy(form);
 		}
 	}
 
@@ -684,7 +825,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			Filedownload.save(media);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Failed to build archive", e);
-			showNotification("Failed to build archive: " + e.getMessage(), "error");
+			showNotification(Msg.getMsg(Env.getCtx(), "Error") + e.getMessage(), "error");
 		} finally {
 			Clients.clearBusy(form);
 		}

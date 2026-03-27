@@ -21,29 +21,35 @@
  **********************************************************************/
 package org.idempiere.extension.manager.event;
 
+import java.sql.SQLException;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import org.adempiere.base.annotation.EventTopicDelegate;
 import org.adempiere.base.event.EventManager;
-import org.adempiere.base.event.IEventTopics;
 import org.adempiere.base.event.annotations.EventDelegate;
 import org.adempiere.base.event.annotations.EventTopic;
+import org.adempiere.model.MBroadcastMessage;
 import org.compiere.model.MExtension;
 import org.compiere.model.MExtensionEntity;
 import org.compiere.model.MPackageImp;
 import org.compiere.model.MPackageImpDetail;
 import org.compiere.model.Query;
 import org.compiere.util.Env;
+import org.compiere.util.Trx;
 import org.osgi.service.event.Event;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+
+import org.idempiere.broadcast.BroadcastMsgUtil;
 import org.idempiere.extension.manager.form.ExtensionBrowserService;
 import org.idempiere.extension.manager.form.ExtensionMetadata;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.util.logging.Level;
 import org.compiere.util.CLogger;
+import org.compiere.util.DB;
 
 @EventTopicDelegate
 public class PackageImpDelegate extends EventDelegate {
@@ -80,18 +86,31 @@ public class PackageImpDelegate extends EventDelegate {
 		if (mpimp.getAD_Package_Imp_ID() > 0 && MPackageImp.PACKAGE_STATUS_COMPLETED.equals(mpimp.getPK_Status())) {
 			String extensionId = getExtensionId(mpimp.getName());
 			if (extensionId != null) {
-				MExtension mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", mpimp.get_TrxName())
+				MExtension mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
 						.setParameters(extensionId)
 						.setOnlyActiveRecords(true)
 						.first();
 				if (mExtension != null) {
-					copyDetailsToExtensionEntity(mExtension, mpimp);
+					Trx trx = Trx.get(Trx.createTrxName(), true);
+					try {
+						DB.getDatabase().forUpdate(mExtension, 3);
+						copyDetailsToExtensionEntity(mExtension, mpimp, trx);
+						trx.commit(true);					
+					} catch (SQLException e) {
+						trx.rollback();
+						CLogger.getCLogger(getClass()).log(Level.SEVERE, e.getMessage(), e);
+						mExtension.set_TrxName(null);
+						mExtension.setExtensionState(MExtension.EXTENSIONSTATE_Error);
+						mExtension.saveEx();
+					} finally {
+						trx.close();
+					}
 				}
 			}
 		} else if (mpimp.getAD_Package_Imp_ID() > 0) {
 			String extensionId = getExtensionId(mpimp.getName());
 			if (extensionId != null) {
-				MExtension mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", mpimp.get_TrxName())
+				MExtension mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
 						.setParameters(extensionId)
 						.setOnlyActiveRecords(true)
 						.first();
@@ -118,9 +137,10 @@ public class PackageImpDelegate extends EventDelegate {
 	 * Copy MPackageImpDetail records to MExtensionEntity records
 	 * @param mExtension
 	 * @param mpimp
+	 * @param trx 
 	 */
-	private void copyDetailsToExtensionEntity(MExtension mExtension, MPackageImp mpimp) {
-		List<MPackageImpDetail> details = new Query(Env.getCtx(), MPackageImpDetail.Table_Name, "AD_Package_Imp_ID=?", mpimp.get_TrxName())
+	private void copyDetailsToExtensionEntity(MExtension mExtension, MPackageImp mpimp, Trx trx) {
+		List<MPackageImpDetail> details = new Query(Env.getCtx(), MPackageImpDetail.Table_Name, "AD_Package_Imp_ID=?", null)
 				.setParameters(mpimp.getAD_Package_Imp_ID())
 				.list();
 		for (MPackageImpDetail detail : details) {
@@ -128,15 +148,75 @@ public class PackageImpDelegate extends EventDelegate {
 					(MPackageImpDetail.ACTION_INSERT.equals(detail.getAction()) || MPackageImpDetail.ACTION_UPDATE.equals(detail.getAction()))) {
 				
 				// Create MExtensionEntity if not exists
-				MExtensionEntity entity = new Query(Env.getCtx(), MExtensionEntity.Table_Name, "AD_Extension_ID=? AND Record_UU=?", mpimp.get_TrxName())
+				MExtensionEntity entity = new Query(Env.getCtx(), MExtensionEntity.Table_Name, "AD_Extension_ID=? AND Record_UU=?", trx.getTrxName())
 						.setParameters(mExtension.getAD_Extension_ID(), detail.getRecord_UU())
 						.first();
 				if (entity == null) {
-					entity = new MExtensionEntity(Env.getCtx(), 0, mpimp.get_TrxName());
+					entity = new MExtensionEntity(Env.getCtx(), 0, 	trx.getTrxName());
 					entity.setAD_Extension_ID(mExtension.getAD_Extension_ID());
 					entity.setAD_Table_ID(detail.getAD_Table_ID());
 					entity.setRecord_UU(detail.getRecord_UU());
 					entity.saveEx();
+				}
+			}
+		}
+	}
+
+	@EventTopic(topic = "idempiere/preIncrementalPackIn")
+	public void onPreIncrementalPackIn() {
+		Object property = getEvent().getProperty(EventManager.EVENT_DATA);
+		if (property instanceof String symbolicName) {
+			String extensionId = getExtensionId(symbolicName);
+			if (extensionId != null) {
+				Properties ctx = Env.getCtx();
+				if (getEvent().getProperty(EventManager.EVENT_CONTEXT) instanceof Properties properties) {
+					ctx = properties;
+				}
+				MExtension mExtension = new Query(ctx, MExtension.Table_Name, "ExtensionId=?", null)
+						.setParameters(extensionId)
+						.setOnlyActiveRecords(true)
+						.first();
+				if (mExtension != null) {
+					MBroadcastMessage msg = new MBroadcastMessage(ctx, 0, null);
+					msg.setTitle(mExtension.getName());
+					msg.setAD_User_ID(mExtension.getUpdatedBy());
+					msg.setBroadcastFrequency(MBroadcastMessage.BROADCASTFREQUENCY_JustOnce);
+					msg.setBroadcastType(MBroadcastMessage.BROADCASTTYPE_Immediate);
+					msg.setTarget(MBroadcastMessage.TARGET_User);
+					msg.setBroadcastMessage("Incremental Pack In for bundle " + symbolicName + " started");
+					msg.saveEx();
+					BroadcastMsgUtil.publishBroadcastMessage(msg.getAD_BroadcastMessage_ID(), null);
+				}
+			}
+		}
+	}
+
+	@EventTopic(topic = "idempiere/postIncrementalPackIn")
+	public void onPostIncrementalPackIn() {
+		Object property = getEvent().getProperty(EventManager.EVENT_DATA);
+		if (property instanceof Object[] data) {
+			if (data.length == 2 && data[0] instanceof String symbolicName && data[1] instanceof Boolean success) {
+				String extensionId = getExtensionId(symbolicName);
+				if (extensionId != null) {
+					Properties ctx = Env.getCtx();
+					if (getEvent().getProperty(EventManager.EVENT_CONTEXT) instanceof Properties properties) {
+						ctx = properties;
+					}
+					MExtension mExtension = new Query(ctx, MExtension.Table_Name, "ExtensionId=?", null)
+						.setParameters(extensionId)
+						.setOnlyActiveRecords(true)
+						.first();
+					if (mExtension != null) {
+						MBroadcastMessage msg = new MBroadcastMessage(ctx, 0, null);
+						msg.setTitle(mExtension.getName());
+						msg.setAD_User_ID(mExtension.getUpdatedBy());
+						msg.setBroadcastFrequency(MBroadcastMessage.BROADCASTFREQUENCY_JustOnce);
+						msg.setBroadcastType(MBroadcastMessage.BROADCASTTYPE_Immediate);
+						msg.setTarget(MBroadcastMessage.TARGET_User);
+						msg.setBroadcastMessage("Incremental Pack In for bundle " + symbolicName + (success ? " completed" : " failed"));
+						msg.saveEx();
+						BroadcastMsgUtil.publishBroadcastMessage(msg.getAD_BroadcastMessage_ID(), null);
+					}
 				}
 			}
 		}
