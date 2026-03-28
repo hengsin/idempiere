@@ -37,6 +37,7 @@ import org.compiere.model.MPackageImp;
 import org.compiere.model.MPackageImpDetail;
 import org.compiere.model.Query;
 import org.compiere.util.Env;
+import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.osgi.service.event.Event;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -165,27 +166,39 @@ public class PackageImpDelegate extends EventDelegate {
 	@EventTopic(topic = "idempiere/preIncrementalPackIn")
 	public void onPreIncrementalPackIn() {
 		Object property = getEvent().getProperty(EventManager.EVENT_DATA);
-		if (property instanceof String symbolicName) {
-			String extensionId = getExtensionId(symbolicName);
-			if (extensionId != null) {
-				Properties ctx = Env.getCtx();
-				if (getEvent().getProperty(EventManager.EVENT_CONTEXT) instanceof Properties properties) {
-					ctx = properties;
-				}
-				MExtension mExtension = new Query(ctx, MExtension.Table_Name, "ExtensionId=?", null)
-						.setParameters(extensionId)
-						.setOnlyActiveRecords(true)
-						.first();
-				if (mExtension != null) {
-					MBroadcastMessage msg = new MBroadcastMessage(ctx, 0, null);
-					msg.setTitle(mExtension.getName());
-					msg.setAD_User_ID(mExtension.getUpdatedBy());
-					msg.setBroadcastFrequency(MBroadcastMessage.BROADCASTFREQUENCY_JustOnce);
-					msg.setBroadcastType(MBroadcastMessage.BROADCASTTYPE_Immediate);
-					msg.setTarget(MBroadcastMessage.TARGET_User);
-					msg.setBroadcastMessage("Incremental Pack In for bundle " + symbolicName + " started");
-					msg.saveEx();
-					BroadcastMsgUtil.publishBroadcastMessage(msg.getAD_BroadcastMessage_ID(), null);
+		if (property instanceof String[] data) {
+			if (data.length == 2) {
+				String symbolicName = data[0];
+				String[] packInList = data[1].split("[,]");
+				String extensionId = getExtensionId(symbolicName);
+				if (extensionId != null) {
+					Properties ctx = Env.getCtx();
+					if (getEvent().getProperty(EventManager.EVENT_CONTEXT) instanceof Properties properties) {
+						ctx = properties;
+					}
+					MExtension mExtension = new Query(ctx, MExtension.Table_Name, "ExtensionId=?", null)
+							.setParameters(extensionId)
+							.setOnlyActiveRecords(true)
+							.first();
+					if (mExtension != null) {
+						MBroadcastMessage msg = new MBroadcastMessage(ctx, 0, null);
+						msg.setTitle(mExtension.getName());
+						msg.setAD_User_ID(mExtension.getUpdatedBy());
+						msg.setBroadcastFrequency(MBroadcastMessage.BROADCASTFREQUENCY_JustOnce);
+						msg.setBroadcastType(MBroadcastMessage.BROADCASTTYPE_Immediate);
+						msg.setTarget(MBroadcastMessage.TARGET_User);
+						StringBuilder sb = new StringBuilder();
+						sb.append("<br/>");
+						sb.append("<ol>");
+						for (String packIn : packInList) {
+							sb.append("<li>").append(packIn).append("</li>");
+						}
+						sb.append("</ol>");
+						String message = Msg.getMsg(Env.getCtx(), "IncrementalPackInRunningInBackground", new Object[] { symbolicName, sb.toString() });
+						msg.setBroadcastMessage(message);
+						msg.saveEx();
+						BroadcastMsgUtil.publishBroadcastMessage(msg.getAD_BroadcastMessage_ID(), null);
+					}
 				}
 			}
 		}
@@ -213,7 +226,8 @@ public class PackageImpDelegate extends EventDelegate {
 						msg.setBroadcastFrequency(MBroadcastMessage.BROADCASTFREQUENCY_JustOnce);
 						msg.setBroadcastType(MBroadcastMessage.BROADCASTTYPE_Immediate);
 						msg.setTarget(MBroadcastMessage.TARGET_User);
-						msg.setBroadcastMessage("Incremental Pack In for bundle " + symbolicName + (success ? " completed" : " failed"));
+						String adMessage = success ? "IncrementalPackInCompletedSuccessfully" : "IncrementalPackInCompletedWithErrors";
+						msg.setBroadcastMessage(Msg.getMsg(Env.getCtx(), adMessage, new Object[] { symbolicName }));
 						msg.saveEx();
 						BroadcastMsgUtil.publishBroadcastMessage(msg.getAD_BroadcastMessage_ID(), null);
 					}

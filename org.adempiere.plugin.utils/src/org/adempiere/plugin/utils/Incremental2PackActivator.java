@@ -24,6 +24,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 import org.adempiere.base.event.EventManager;
 import org.adempiere.base.event.IEventTopics;
@@ -104,6 +105,10 @@ public class Incremental2PackActivator extends AbstractActivator {
 			this.url=url;
 			this.version = version;
 		}
+		@Override
+		public String toString() {
+			return "TwoPackEntry [url=" + url + ", version=" + version + "]";
+		}		
 	}
 	
 	protected void packIn(List<String> installedVersions) {
@@ -185,7 +190,9 @@ public class Incremental2PackActivator extends AbstractActivator {
 		boolean success = true;
 		boolean cacheReset = false;
 		if (!list.isEmpty()) {
-			Event event = EventManager.newEvent(IEventTopics.PRE_INCREMENTAL_PACK_IN, getName(), true);
+			String csv = list.stream().map(e -> e.url.toString()).collect(Collectors.joining(","));
+			Event event = EventManager.newEvent(IEventTopics.PRE_INCREMENTAL_PACK_IN, 
+				new String[] {getName(), csv}, true);
 			EventManager.getInstance().sendEvent(event);
 		}
 		try {
