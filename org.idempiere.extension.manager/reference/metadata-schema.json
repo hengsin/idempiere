@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "iDempiere Extension Metadata",
   "type": "object",
-  "required": ["id", "version", "idempiereVersion", "bundles", "entityType"],
+  "required": ["id", "name", "version", "idempiereVersion", "bundles"],
   "properties": {
     "id": {
       "type": "string",
