@@ -323,8 +323,37 @@ public class ExtensionBrowserFormController implements IFormController {
 		sb.append("<h3>Installation</h3>");
 		sb.append("<div><label>ID</label><code>").append(id).append("</code></div>");
 		sb.append("<div><label>%s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Version"))).append(version).append("</span></div>");
+		if (extension.hasIDempiereVersion()) {
+			sb.append("<div><label>iDempiere %s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Version"))).append(extension.getIDempiereVersion()).append("</span></div>");
+		}
 		sb.append("<div><label>%s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Updated"))).append(lastUpdated).append("</span></div>");
 		sb.append("</section>");
+
+		// Database section
+		if (extension.hasDatabase()) {
+			sb.append("<section>");
+			sb.append("<h3>%s</h3>".formatted(Msg.getMsg(Env.getCtx(), "Database"))); //Database
+			com.google.gson.JsonArray database = extension.getDatabase();
+			for (com.google.gson.JsonElement dbEl : database) {
+				com.google.gson.JsonObject db = dbEl.getAsJsonObject();
+				String dbId = db.get("id").getAsString();
+				String dbVersion = db.has("version") ? db.get("version").getAsString() : null;
+				sb.append("<div><label style=\"text-transform: capitalize;\">").append(dbId).append("</label>");
+				if (dbVersion != null) {
+					sb.append("<span>").append(dbVersion).append("</span>");
+				}
+				sb.append("</div>");
+				if (db.has("extensions")) {
+					com.google.gson.JsonArray dbExts = db.getAsJsonArray("extensions");
+					sb.append("<div class=\"tags\" style=\"margin-top: 5px; margin-left: 10px;\">");
+					for (com.google.gson.JsonElement de : dbExts) {
+						sb.append("<span class=\"tag\">").append(de.getAsString()).append("</span>");
+					}
+					sb.append("</div>");
+				}
+			}
+			sb.append("</section>");
+		}
 		
 		// Categories section
 		if (extension.hasCategories()) {
