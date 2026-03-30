@@ -26,6 +26,8 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.apps.ProcessModalDialog;
@@ -68,7 +70,7 @@ import org.zkoss.zul.Vlayout;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 @Form
@@ -84,6 +86,7 @@ public class ExtensionBrowserFormController implements IFormController {
 	private ExtensionBrowserService service;
 	private List<ExtensionMetadata> allRepositoryExtensions;
 	private List<ExtensionMetadata> allInstalledExtensions;
+	private Map<String, ExtensionMetadata> metadataCache = new HashMap<>();
 
 	public ExtensionBrowserFormController() {
 		form = new ExtensionBrowserForm();
@@ -225,6 +228,58 @@ public class ExtensionBrowserFormController implements IFormController {
 			return;
 		}
 
+		if (form.repositoryTab.isSelected() && !selectedExtension.isFullMetadata()) {
+			if (selectedExtension.hasVersions()) {
+				String metadataUrl = selectedExtension.getVersions().get(0).getAsJsonObject().get("metadataUrl").getAsString();
+				loadMetadata(metadataUrl, true);
+				return;
+			}
+		}
+
+		renderExtensionDetails();
+	}
+
+	private void loadMetadata(String metadataUrl, boolean initialSelect) {
+		if (metadataCache.containsKey(metadataUrl)) {
+			ExtensionMetadata cached = metadataCache.get(metadataUrl);
+			if (initialSelect) {
+				cached.setVersions(selectedExtension.getVersions());
+			}
+			selectedExtension = cached;
+			renderExtensionDetails();
+			return;
+		}
+
+		try {
+			ExtensionMetadata fullMetadata = service.fetchExtensionMetadata(metadataUrl);
+			if (fullMetadata != null) {
+				if (initialSelect) {
+					fullMetadata.setVersions(selectedExtension.getVersions());
+				} else {
+					// keep versions from previous selectedExtension if not present
+					if (!fullMetadata.hasVersions() && selectedExtension.hasVersions()) {
+						fullMetadata.setVersions(selectedExtension.getVersions());
+					}
+				}
+				metadataCache.put(metadataUrl, fullMetadata);
+				if (selectedExtension != null) {
+					if (selectedExtension.hasInfoUrl())
+						fullMetadata.getJsonObject().addProperty("infoUrl", selectedExtension.getInfoUrl());
+					if (selectedExtension.hasChangeLogUrl())
+						fullMetadata.getJsonObject().addProperty("changeLogUrl", selectedExtension.getChangeLogUrl());
+					if (selectedExtension.hasAssets())
+						fullMetadata.getJsonObject().add("assets", selectedExtension.getAssets());
+				}
+				selectedExtension = fullMetadata;
+				renderExtensionDetails();
+			}
+		} catch (Exception e) {
+			log.log(Level.SEVERE, "Failed to load extension metadata from " + metadataUrl, e);
+			showNotification(Msg.getMsg(Env.getCtx(), "Error") + e.getMessage(), "error");
+		}
+	}
+
+	private void renderExtensionDetails() {
 		ExtensionMetadata extension = selectedExtension;
 		form.infoArea.getChildren().clear();
 
@@ -322,7 +377,15 @@ public class ExtensionBrowserFormController implements IFormController {
 		sb.append("<section>");
 		sb.append("<h3>Installation</h3>");
 		sb.append("<div><label>ID</label><code>").append(id).append("</code></div>");
-		sb.append("<div><label>%s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Version"))).append(version).append("</span></div>");
+		
+		String placeholderId = null;
+		if (extension.hasVersions() && extension.getVersions().size() > 1 && form.repositoryTab.isSelected()) {
+			placeholderId = "vc-" + UUID.randomUUID().toString();
+			sb.append("<div id=\"%s\"><label>%s</label></div>".formatted(placeholderId, Msg.getMsg(Env.getCtx(), "Version")));
+		} else {
+			sb.append("<div><label>%s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Version"))).append(version).append("</span></div>");
+		}
+
 		if (extension.hasIDempiereVersion()) {
 			sb.append("<div><label>iDempiere %s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Version"))).append(extension.getIDempiereVersion()).append("</span></div>");
 		}
@@ -386,6 +449,44 @@ public class ExtensionBrowserFormController implements IFormController {
 		asideDiv.setVflex("1");
 		Html html = new Html(sb.toString());
 		asideDiv.appendChild(html);
+
+		if (extension.hasVersions() && extension.getVersions().size() > 1 && form.repositoryTab.isSelected()) {
+			org.zkoss.zul.Combobox versionBox = new org.zkoss.zul.Combobox();
+			versionBox.setReadonly(true);
+			versionBox.setSclass("version-select");
+			// versionBox.setStyle("width: 100%; margin-bottom: 10px;");
+			
+			JsonArray versions = extension.getVersions();
+			for (int i = 0; i < versions.size(); i++) {
+				JsonObject v = versions.get(i).getAsJsonObject();
+				String vStr = v.get("version").getAsString();
+				String vUrl = v.get("metadataUrl").getAsString();
+				org.zkoss.zul.Comboitem item = new org.zkoss.zul.Comboitem(vStr);
+				item.setValue(vUrl);
+				versionBox.appendChild(item);
+				if (version.equals(vStr)) {
+					versionBox.setSelectedItem(item);
+				}
+			}
+			
+			versionBox.addEventListener(Events.ON_SELECT, ev -> {
+				String newUrl = versionBox.getSelectedItem().getValue();
+				loadMetadata(newUrl, false);
+			});
+			
+			asideDiv.appendChild(versionBox);
+			// Move the versionBox into the placeholder in the HTML
+			AtomicReference<String> scriptRef = new AtomicReference<>(placeholderId);
+			asideDiv.addEventListener("onAfterSize", ev -> {
+				String s = scriptRef.getAndSet(null);
+				if (s != null) {
+					String script = "var container = document.getElementById('%s'); if (container) { container.appendChild(zk.Widget.$('%s').$n()); }".formatted(s, versionBox.getUuid());
+					// Inject the combo box into the div with id vc-uuid
+					Clients.evalJavaScript(script);
+				}				
+			});
+		}
+
 		return asideDiv;
 	}
 

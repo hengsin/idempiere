@@ -61,6 +61,7 @@ import org.idempiere.extension.manager.ExtensionManagerActivator;
 import org.idempiere.extension.manager.event.PackageImpDelegate;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.Version;
+import org.osgi.framework.VersionRange;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -142,6 +143,27 @@ public class ExtensionBrowserService {
 			log.log(Level.SEVERE, "Failed to fetch or render documentation from " + rawUrl, e);
 			return "<div style=\"padding: 20px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;\">" +
 					"<h4>%s</h4><p>" + e.getMessage() + "</p></div>".formatted(Msg.getMsg(Env.getCtx(), "Error"));
+		}
+	}
+
+	/**
+	 * Fetch extension metadata from URL
+	 * @param url
+	 * @return ExtensionMetadata
+	 * @throws Exception
+	 */
+	public ExtensionMetadata fetchExtensionMetadata(String url) throws Exception {
+		if (url == null || url.isEmpty()) return null;
+		
+		String rawUrl = toRawGithubPath(url);
+		HttpRequest request = HttpRequest.newBuilder().uri(URI.create(rawUrl)).GET().build();
+		HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+		
+		if (response.statusCode() == 200) {
+			JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+			return new ExtensionMetadata(json);
+		} else {
+			throw new RuntimeException(Msg.getMsg(Env.getCtx(), "HttpFetchFailed", new Object[] {response.statusCode(), rawUrl}));
 		}
 	}
 
@@ -646,7 +668,7 @@ public class ExtensionBrowserService {
 				}
 				String depId = depObj.get("id").getAsString();
 				String depVersionStr = depObj.get("version").getAsString();
-				Version depVersion = Version.parseVersion(depVersionStr);
+				VersionRange depVersionRange = new VersionRange(depVersionStr);
 				
 				MExtension depExt = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
 						.setParameters(depId)
@@ -659,7 +681,7 @@ public class ExtensionBrowserService {
 				}
 				
 				Version installedDepVersion = Version.parseVersion(depExt.getExtensionVersion());
-				if (installedDepVersion.compareTo(depVersion) < 0) {
+				if (!depVersionRange.includes(installedDepVersion)) {
 					//Incompatible dependency version: {0}. Required {1} and above but installed {2}
 					throw new AdempiereException(Msg.getMsg(Env.getCtx(), "IncompatibleDependencyVersion", new Object[] {depId, depVersionStr, depExt.getExtensionVersion()}));
 				}
@@ -674,10 +696,10 @@ public class ExtensionBrowserService {
 	 */
 	public void validateIDempiereVersion(ExtensionMetadata metadata) {
 		String requiredVersion = metadata.getIDempiereVersion();
-		Version requiredVersionObj = Version.parseVersion(requiredVersion);		
+		VersionRange requiredVersionRange = new VersionRange(requiredVersion);		
 		String currentVersion = org.compiere.Adempiere.getVersion();
 		Version currentVersionObj = Version.parseVersion(currentVersion);
-		if (currentVersionObj.compareTo(requiredVersionObj) < 0) {
+		if (!requiredVersionRange.includes(currentVersionObj)) {
 			//Incompatible iDempiere version. Extension requires {0} and above but current version is {1}"
 			throw new AdempiereException(Msg.getMsg(Env.getCtx(), "IncompatibleIdempiereVersion", new Object[] { requiredVersion, currentVersion }));
 		}

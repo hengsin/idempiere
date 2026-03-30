@@ -155,6 +155,22 @@ public class ExtensionMetadata {
 		return hasDatabase() ? json.getAsJsonArray("database") : new JsonArray();
 	}
 
+	public boolean hasVersions() {
+		return json.has("versions") && json.get("versions").isJsonArray();
+	}
+
+	public JsonArray getVersions() {
+		return hasVersions() ? json.getAsJsonArray("versions") : new JsonArray();
+	}
+
+	public boolean isFullMetadata() {
+		return hasBundles();
+	}
+
+	public void setVersions(JsonArray versions) {
+		json.add("versions", versions);
+	}
+
 	@Override
 	public String toString() {
 		return json.toString();
