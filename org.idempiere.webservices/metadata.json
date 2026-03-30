@@ -1,0 +1,30 @@
+{
+  "id": "org.idempiere.webservices",
+  "version": "13.0.0",
+  "idempiereVersion": "12",
+  "releaseDate": "2026-03-29",
+  "name": "iDempiere SOAP Web Services",
+  "description": "The iDempiere ADInterface providing SOAP and REST access to the Active Data Dictionary.",
+  "infoUrl": "https://github.com/idempiere/idempiere/blob/main/org.idempiere.webservices/info.md",
+  "categories": [
+    "Core",
+    "API",
+    "Integration"
+  ],
+  "tags": [
+    "soap",
+    "rest",
+    "adinterface",
+    "xml",
+    "json"
+  ],
+  "bundles": [
+    {
+      "symbolicName": "org.idempiere.webservices"
+    },
+    {
+	  "symbolicName": "org.idempiere.webservices.resources"
+	}
+  ],
+  "dependencies": []
+}

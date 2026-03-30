@@ -229,7 +229,7 @@ public class ExtensionBrowserFormController implements IFormController {
 		}
 
 		if (form.repositoryTab.isSelected() && !selectedExtension.isFullMetadata()) {
-			if (selectedExtension.hasVersions()) {
+			if (selectedExtension.getVersions().size() > 0) {
 				String metadataUrl = selectedExtension.getVersions().get(0).getAsJsonObject().get("metadataUrl").getAsString();
 				loadMetadata(metadataUrl, true);
 				return;
@@ -253,13 +253,8 @@ public class ExtensionBrowserFormController implements IFormController {
 		try {
 			ExtensionMetadata fullMetadata = service.fetchExtensionMetadata(metadataUrl);
 			if (fullMetadata != null) {
-				if (initialSelect) {
+				if (selectedExtension != null) {
 					fullMetadata.setVersions(selectedExtension.getVersions());
-				} else {
-					// keep versions from previous selectedExtension if not present
-					if (!fullMetadata.hasVersions() && selectedExtension.hasVersions()) {
-						fullMetadata.setVersions(selectedExtension.getVersions());
-					}
 				}
 				metadataCache.put(metadataUrl, fullMetadata);
 				if (selectedExtension != null) {
@@ -379,7 +374,7 @@ public class ExtensionBrowserFormController implements IFormController {
 		sb.append("<div><label>ID</label><code>").append(id).append("</code></div>");
 		
 		String placeholderId = null;
-		if (extension.hasVersions() && extension.getVersions().size() > 1 && form.repositoryTab.isSelected()) {
+		if (extension.getVersions().size() > 1 && form.repositoryTab.isSelected()) {
 			placeholderId = "vc-" + UUID.randomUUID().toString();
 			sb.append("<div id=\"%s\"><label>%s</label></div>".formatted(placeholderId, Msg.getMsg(Env.getCtx(), "Version")));
 		} else {
@@ -450,7 +445,7 @@ public class ExtensionBrowserFormController implements IFormController {
 		Html html = new Html(sb.toString());
 		asideDiv.appendChild(html);
 
-		if (extension.hasVersions() && extension.getVersions().size() > 1 && form.repositoryTab.isSelected()) {
+		if (extension.getVersions().size() > 1 && form.repositoryTab.isSelected()) {
 			org.zkoss.zul.Combobox versionBox = new org.zkoss.zul.Combobox();
 			versionBox.setReadonly(true);
 			versionBox.setSclass("version-select");

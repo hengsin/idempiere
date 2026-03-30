@@ -27,11 +27,18 @@ import java.util.Objects;
 
 public class ExtensionMetadata {
 	private JsonObject json;
+	private JsonArray versions;
 
 	public ExtensionMetadata(JsonObject json) {
 		this.json = Objects.requireNonNull(json, "json cannot be null");
 		if (!this.json.has("id")) {
 			throw new IllegalArgumentException("Extension id is mandatory");
+		}
+		if (json.has("versions")) {
+			this.versions = json.getAsJsonArray("versions");
+			json.remove("versions");
+		} else {
+			this.versions = new JsonArray();
 		}
 	}
 
@@ -155,12 +162,8 @@ public class ExtensionMetadata {
 		return hasDatabase() ? json.getAsJsonArray("database") : new JsonArray();
 	}
 
-	public boolean hasVersions() {
-		return json.has("versions") && json.get("versions").isJsonArray();
-	}
-
 	public JsonArray getVersions() {
-		return hasVersions() ? json.getAsJsonArray("versions") : new JsonArray();
+		return versions != null ? versions : new JsonArray();
 	}
 
 	public boolean isFullMetadata() {
@@ -168,7 +171,7 @@ public class ExtensionMetadata {
 	}
 
 	public void setVersions(JsonArray versions) {
-		json.add("versions", versions);
+		this.versions = versions;
 	}
 
 	@Override
