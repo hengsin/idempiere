@@ -47,7 +47,7 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["symbolicName", "downloadUrl"],
+        "required": ["symbolicName"],
         "properties": {
           "symbolicName": { "type": "string" },
           "downloadUrl": { "type": "string", "format": "uri" },

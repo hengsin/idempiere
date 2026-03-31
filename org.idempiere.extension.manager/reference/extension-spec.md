@@ -13,13 +13,13 @@ com.example.plugin.name/
 - Root is extension name
 - info.md: Human-readable description
 - CHANGELOG.md: Optional change log. Recommended to follow the https://keepachangelog.com/en/1.0.0/ format.
-- assets: Static assets (image, csv, etc)
+- assets: Static assets (image, csv, etc.)
 - 1.0.0: Version-specific folder
 - metadata.json: Technical metadata & bundle links
 
 ## Extension Info
 
-### info. md
+### info.md
 - Should have the following sections:
   - Summary
   - Features
@@ -89,7 +89,7 @@ After installation, navigate to **System Admin > Tenant > Report PDF Configurati
   "description": "Short description of this specific version.",
   "categories": [“category1”, “category2”],
   "tags": [“tag1”, “tag2”],
-  "entityType": "com.example.extension.name"
+  "entityType": "com.example.extension.name",
   "bundles": [
     {
       "symbolicName": "com.example.plugin.core",

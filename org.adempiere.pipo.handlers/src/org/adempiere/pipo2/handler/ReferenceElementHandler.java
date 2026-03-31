@@ -76,7 +76,7 @@ public class ReferenceElementHandler extends AbstractElementHandler {
 						element.skip = true;
 						return;
 					}
-					backupRecord(ctx, impDetail.getAD_Package_Imp_ID(), MReference.Table_Name, mReference);
+					backupRecord(ctx, impDetail.getAD_Package_Imp_Detail_ID(), MReference.Table_Name, mReference);
 					action = MPackageImpDetail.ACTION_UPDATE;				
 				} else {
 					action = MPackageImpDetail.ACTION_INSERT;

@@ -97,7 +97,7 @@ public class PackageImpDelegate extends EventDelegate {
 						DB.getDatabase().forUpdate(mExtension, 3);
 						copyDetailsToExtensionEntity(mExtension, mpimp, trx);
 						trx.commit(true);					
-					} catch (SQLException e) {
+					} catch (Exception e) {
 						trx.rollback();
 						CLogger.getCLogger(getClass()).log(Level.SEVERE, e.getMessage(), e);
 						mExtension.set_TrxName(null);
@@ -194,7 +194,7 @@ public class PackageImpDelegate extends EventDelegate {
 							sb.append("<li>").append(packIn).append("</li>");
 						}
 						sb.append("</ol>");
-						String message = Msg.getMsg(Env.getCtx(), "IncrementalPackInRunningInBackground", new Object[] { symbolicName, sb.toString() });
+						String message = Msg.getMsg(ctx, "IncrementalPackInRunningInBackground", new Object[] { symbolicName, sb.toString() });
 						msg.setBroadcastMessage(message);
 						msg.saveEx();
 						BroadcastMsgUtil.publishBroadcastMessage(msg.getAD_BroadcastMessage_ID(), null);
@@ -227,7 +227,7 @@ public class PackageImpDelegate extends EventDelegate {
 						msg.setBroadcastType(MBroadcastMessage.BROADCASTTYPE_Immediate);
 						msg.setTarget(MBroadcastMessage.TARGET_User);
 						String adMessage = success ? "IncrementalPackInCompletedSuccessfully" : "IncrementalPackInCompletedWithErrors";
-						msg.setBroadcastMessage(Msg.getMsg(Env.getCtx(), adMessage, new Object[] { symbolicName }));
+						msg.setBroadcastMessage(Msg.getMsg(ctx, adMessage, new Object[] { symbolicName }));
 						msg.saveEx();
 						BroadcastMsgUtil.publishBroadcastMessage(msg.getAD_BroadcastMessage_ID(), null);
 					}

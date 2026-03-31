@@ -13,7 +13,7 @@
 
 ## ⚙️ Compatibility
 
-* **iDempiere Version:** 12.0+ (Core Module)
+* **Core Module**
 * **Java Version:** 17+
 * **Protocol:** SOAP 1.1/1.2 and REST (POST-based)
 
@@ -35,4 +35,4 @@
 
 * **Developer:** iDempiere Community
 * **Source Code:** [https://github.com/idempiere/idempiere/tree/master/org.idempiere.webservices](https://github.com/idempiere/idempiere/tree/master/org.idempiere.webservices)
-* **Documentation:** [iDempiere Wiki - Web Services](https://wiki.idempiere.org/en/Web_Services)
+* **Documentation:** [iDempiere Wiki - Web Services](https://wiki.idempiere.org/en/Web_services)

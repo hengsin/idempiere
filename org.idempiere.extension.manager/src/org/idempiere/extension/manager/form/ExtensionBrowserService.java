@@ -30,8 +30,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -90,7 +92,8 @@ public class ExtensionBrowserService {
 
 		String indexUrl = toRawGithubURL(repoUrl, "index.json");
 
-		HttpRequest request = HttpRequest.newBuilder().uri(URI.create(indexUrl)).GET().build();
+		// add reasonable timeout
+		HttpRequest request = HttpRequest.newBuilder().uri(URI.create(indexUrl)).GET().timeout(Duration.ofSeconds(30)).build();
 		HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 		
 		if (response.statusCode() == 200) {
@@ -123,7 +126,7 @@ public class ExtensionBrowserService {
 		String rawUrl = toRawGithubPath(url);
 		
 		try {
-			HttpRequest request = HttpRequest.newBuilder().uri(URI.create(rawUrl)).GET().build();
+			HttpRequest request = HttpRequest.newBuilder().uri(URI.create(rawUrl)).GET().timeout(Duration.ofSeconds(30)).build();
 			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 			
 			String markdown = "";
@@ -156,7 +159,7 @@ public class ExtensionBrowserService {
 		if (url == null || url.isEmpty()) return null;
 		
 		String rawUrl = toRawGithubPath(url);
-		HttpRequest request = HttpRequest.newBuilder().uri(URI.create(rawUrl)).GET().build();
+		HttpRequest request = HttpRequest.newBuilder().uri(URI.create(rawUrl)).GET().timeout(Duration.ofSeconds(30)).build();
 		HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 		
 		if (response.statusCode() == 200) {
@@ -403,7 +406,7 @@ public class ExtensionBrowserService {
 			if (extension.hasInfoUrl()) {
 				String infoUrl = extension.getInfoUrl();
 				infoUrl = toRawGithubPath(infoUrl);
-				HttpRequest reqInfo = HttpRequest.newBuilder().uri(URI.create(infoUrl)).GET().build();
+				HttpRequest reqInfo = HttpRequest.newBuilder().uri(URI.create(infoUrl)).GET().timeout(Duration.ofSeconds(30)).build();
 				HttpResponse<byte[]> resInfo = httpClient.send(reqInfo, HttpResponse.BodyHandlers.ofByteArray());
 				if (resInfo.statusCode() == 200) {
 					zos.putNextEntry(new ZipEntry("info.md"));
@@ -416,7 +419,7 @@ public class ExtensionBrowserService {
 			if (extension.hasChangeLogUrl()) {
 				String changelogUrl = extension.getChangeLogUrl();
 				changelogUrl = toRawGithubPath(changelogUrl);
-				HttpRequest reqChangelog = HttpRequest.newBuilder().uri(URI.create(changelogUrl)).GET().build();
+				HttpRequest reqChangelog = HttpRequest.newBuilder().uri(URI.create(changelogUrl)).GET().timeout(Duration.ofSeconds(30)).build();
 				HttpResponse<byte[]> resChangelog = httpClient.send(reqChangelog, HttpResponse.BodyHandlers.ofByteArray());
 				if (resChangelog.statusCode() == 200) {
 					zos.putNextEntry(new ZipEntry("CHANGELOG.md"));
@@ -433,11 +436,12 @@ public class ExtensionBrowserService {
 					if (a.has("url") && a.has("name")) {
 						String aUrl = a.get("url").getAsString();
 						aUrl = toRawGithubPath(aUrl);
+						String assetName = Paths.get(a.get("name").getAsString()).getFileName().toString();
 						try {
-							HttpRequest reqAsset = HttpRequest.newBuilder().uri(URI.create(aUrl)).GET().build();
+							HttpRequest reqAsset = HttpRequest.newBuilder().uri(URI.create(aUrl)).GET().timeout(Duration.ofSeconds(30)).build();
 							HttpResponse<byte[]> resAsset = httpClient.send(reqAsset, HttpResponse.BodyHandlers.ofByteArray());
 							if (resAsset.statusCode() == 200) {
-								zos.putNextEntry(new ZipEntry("assets/" + a.get("name").getAsString()));
+								zos.putNextEntry(new ZipEntry("assets/" + assetName));
 								zos.write(resAsset.body());
 								zos.closeEntry();
 							}
@@ -454,11 +458,11 @@ public class ExtensionBrowserService {
 				for (JsonElement bel : bundles) {
 					JsonObject b = bel.getAsJsonObject();
 					if (b.has("downloadUrl")) {
-						String dUrl = b.getAsJsonPrimitive("downloadUrl").getAsString();
-						HttpRequest reqJar = HttpRequest.newBuilder().uri(URI.create(dUrl)).GET().build();
+						String dUrl = toRawGithubPath(b.getAsJsonPrimitive("downloadUrl").getAsString());
+						HttpRequest reqJar = HttpRequest.newBuilder().uri(URI.create(dUrl)).GET().timeout(Duration.ofSeconds(30)).build();
 						HttpResponse<InputStream> resJar = httpClient.send(reqJar, HttpResponse.BodyHandlers.ofInputStream());
 						if (resJar.statusCode() == 200) {
-							String fileName = dUrl.substring(dUrl.lastIndexOf('/') + 1);
+							String fileName = Paths.get(URI.create(dUrl).getPath()).getFileName().toString();
 							if (!fileName.endsWith(".jar") && b.has("symbolicName")) {
 								fileName = b.getAsJsonPrimitive("symbolicName").getAsString() + ".jar";
 							}
@@ -505,7 +509,17 @@ public class ExtensionBrowserService {
 	 * @return
 	 */
 	public MExtension autoRegisterExtension(ExtensionMetadata extension) {
-		MExtension mExtension = new MExtension(Env.getCtx(), 0, null);
+		// update existing state if exits
+		MExtension mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
+				.setParameters(extension.getId())
+				.first();
+		if (mExtension != null) {
+			mExtension.setExtensionState(MExtension.EXTENSIONSTATE_Installed);
+			mExtension.setIsActive(true);
+			mExtension.saveEx();
+			return mExtension;
+		}
+		mExtension = new MExtension(Env.getCtx(), 0, null);
 		mExtension.setExtensionId(extension.getId());
 		mExtension.setName(extension.getName());
 		mExtension.setExtensionVersion(extension.getVersion());
@@ -728,7 +742,7 @@ public class ExtensionBrowserService {
 			if (statusCallback != null)
 				statusCallback.onCallback(Msg.getMsg(Env.getCtx(), "DownloadingBundleFrom", new Object[]{bundleObj.get("symbolicName").getAsString(), downloadUrl}));
 
-			HttpRequest jarRequest = HttpRequest.newBuilder().uri(URI.create(downloadUrl)).GET().build();
+			HttpRequest jarRequest = HttpRequest.newBuilder().uri(URI.create(downloadUrl)).GET().timeout(Duration.ofSeconds(30)).build();
 			HttpResponse<InputStream> jarResponse = httpClient.send(jarRequest, HttpResponse.BodyHandlers.ofInputStream());
 			
 			if (jarResponse.statusCode() != 200) {
@@ -752,7 +766,7 @@ public class ExtensionBrowserService {
 			}
 			
 			if (statusCallback != null)
-				statusCallback.onCallback("Installing bundle from " + downloadUrl);
+				statusCallback.onCallback(Msg.getMsg(Env.getCtx(), "InstallingExtensionBundle", new Object[]{downloadUrl}));
 			Bundle bundle;
 			try (java.io.FileInputStream fis = new java.io.FileInputStream(tempZip)) {
 				bundle = ExtensionManagerActivator.context.installBundle(downloadUrl, fis);
@@ -770,7 +784,7 @@ public class ExtensionBrowserService {
 				twoPackBundles.add(bundle.getSymbolicName());
 			}
 			if (statusCallback != null)
-				statusCallback.onCallback("Starting bundle " + bundle.getSymbolicName());
+				statusCallback.onCallback(Msg.getMsg(Env.getCtx(), "StartingExtensionBundle", new Object[]{bundle.getSymbolicName()}));
 			bundle.start();			
 		}
 
@@ -790,7 +804,7 @@ public class ExtensionBrowserService {
 			int count = query.count();
 			if (count > 0) {
 				if (statusCallback != null)
-					statusCallback.onCallback("Installing extension data in background...");
+					statusCallback.onCallback(Msg.getMsg(Env.getCtx(), "ImportingExtensionDataInBackground"));
 			}
 		}
 

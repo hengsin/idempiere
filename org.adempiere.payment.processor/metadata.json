@@ -1,11 +1,11 @@
 {
   "id": "org.adempiere.payment.processor",
-  "version": "12.0.0",
-  "idempiereVersion": "12",
+  "version": "0.0.0",
+  "idempiereVersion": "0",
   "releaseDate": "2026-03-30",
   "name": "iDempiere Payment Processor",
   "description": "Payment processor implementations for payment gateways.",
-  "infoUrl": "https://github.com/idempiere/idempiere/blob/main/org.adempiere.payment.processor/info.md",
+  "infoUrl": "https://github.com/idempiere/idempiere-extension-repository/blob/main/extensions/org.adempiere.payment.processor/info.md",
   "categories": [
     "Payments"
   ],

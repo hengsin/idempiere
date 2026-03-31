@@ -110,8 +110,8 @@ public interface IEventTopics {
 	/** Called after final update AD_Package_Imp is committed */
 	public static final String POST_PACKIN_PACKAGE_IMP = "idempiere/postPackInPackageImp";
 
-	/** Called before the auto incremental pack in  of bundle (META_INF/2Pack_*.zip) */
+	/** Called before the auto incremental pack in of bundle (META_INF/2Pack_*.zip) */
 	public static final String PRE_INCREMENTAL_PACK_IN = "idempiere/preIncrementalPackIn";
-	/** Called after the auto incremental pack in  of bundle (META_INF/2Pack_*.zip) */
+	/** Called after the auto incremental pack in of bundle (META_INF/2Pack_*.zip) */
 	public static final String POST_INCREMENTAL_PACK_IN = "idempiere/postIncrementalPackIn";
 }

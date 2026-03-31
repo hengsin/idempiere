@@ -13,8 +13,8 @@
 				transition: background 0.2s;
 			}
 			.extensions .item.selected {
-				padding: 15px 15px 15px 11px; border-bottom: 1px solid #eee; cursor: pointer; 
-				transition: background 0.2s; background-color: #f0f7ff; border-left: 4px solid #007bff;
+				padding: 15px 15px 15px 11px; 				
+				background-color: #f0f7ff; border-left: 4px solid #007bff;
 			}
 			.extensions .item .name {
 				font-weight: 600; font-size: 1.1em; color: #333; display: block;
@@ -133,7 +133,7 @@
 						<button id="enableDisableButton" label="${arg.disable}" visible="false"
 							use="org.adempiere.webui.component.Button"/>
 						<!-- Download button is always enabled once a module is selected -->
-						<button id="downloadButton" label="${arg.download} (.idext)" disabled="true"
+						<button id="downloadButton" label="${arg.download}" disabled="true"
 							use="org.adempiere.webui.component.Button" />
 						<button id="registryButton" label="${arg.registry}" disabled="true"
 							use="org.adempiere.webui.component.Button"/>

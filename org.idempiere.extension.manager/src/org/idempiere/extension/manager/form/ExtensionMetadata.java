@@ -155,7 +155,7 @@ public class ExtensionMetadata {
 	}
 
 	public boolean hasDatabase() {
-		return json.has("database");
+		return json.has("database") && json.get("database").isJsonArray();
 	}
 
 	public JsonArray getDatabase() {

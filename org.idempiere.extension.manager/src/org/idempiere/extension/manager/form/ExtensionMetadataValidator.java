@@ -164,9 +164,11 @@ public class ExtensionMetadataValidator {
 						if (db.has("version")) validateString(db.get("version"), "database[" + i + "].version", errors);
 						if (db.has("extensions")) validateStringArray(db.get("extensions"), "database[" + i + "].extensions", false, errors);
 
-						String id = db.get("id").getAsString();
-						if (!"postgresql".equalsIgnoreCase(id) && !"oracle".equalsIgnoreCase(id)) {
-							errors.add("database[" + i + "].id must be either 'postgresql' or 'oracle'.");
+						if (db.has("id")) {
+							String id = db.get("id").getAsString();
+							if (!"postgresql".equalsIgnoreCase(id) && !"oracle".equalsIgnoreCase(id)) {
+								errors.add("database[" + i + "].id must be either 'postgresql' or 'oracle'.");
+							}
 						}
 					} else {
 						errors.add("database[" + i + "] must be an object.");

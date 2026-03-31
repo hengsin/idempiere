@@ -23,6 +23,7 @@ package org.idempiere.extension.manager.form;
 
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -109,9 +110,10 @@ public class ExtensionBrowserFormController implements IFormController {
 	}
 
 	private void loadRepositoryExtensions() {
-		try {
-			extensionMap = new HashMap<>();
-			form.extensionListbox.getChildren().clear();
+		extensionMap = new HashMap<>();
+		form.extensionListbox.getChildren().clear();
+		allRepositoryExtensions = new ArrayList<>();
+		try {			
 			JsonArray extensions = service.fetchRepositoryExtensions();						
 			for (JsonElement el : extensions) {
 				ExtensionMetadata extObj = new ExtensionMetadata(el.getAsJsonObject());
@@ -121,17 +123,21 @@ public class ExtensionBrowserFormController implements IFormController {
 				renderExtensionItem(form.extensionListbox, extObj, true);
 				extensionMap.put(id, extObj);
 			}
-			allRepositoryExtensions = new java.util.ArrayList<>(extensionMap.values());
+			allRepositoryExtensions = new ArrayList<>(extensionMap.values());
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Failed to load repository extensions", e);
 			Label emptyLabel = new Label(Msg.getMsg(Env.getCtx(), "ErrorLoadingExtensions", new Object[]{e.getMessage()})); //Error loading extensions: {0}
 			emptyLabel.setSclass("error");
+			form.extensionListbox.getChildren().clear();
 			form.extensionListbox.appendChild(emptyLabel);
+			extensionMap = new HashMap<>();
+			allRepositoryExtensions = new ArrayList<>();
 		}
 	}
 
 	private void loadInstalledExtensions() {
 		form.installedListbox.getChildren().clear();
+		allInstalledExtensions = new ArrayList<>();
 		List<MExtension> installed = service.getInstalledExtensions();		
 		if (installed.isEmpty()) {
 			Label emptyLabel = new Label(Msg.getMsg(Env.getCtx(), "NoExtensionsInstalled")); //No extensions installed
@@ -139,8 +145,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			form.installedListbox.appendChild(emptyLabel);
 			return;
 		}
-
-		allInstalledExtensions = new java.util.ArrayList<>();
+		
 		for (MExtension ext : installed) {
 			String metadataStr = ext.getExtensionMetadata();
 			if (!Util.isEmpty(metadataStr, true)) {
@@ -339,7 +344,6 @@ public class ExtensionBrowserFormController implements IFormController {
 		form.infoArea.appendChild(mainLayout);
 
 		updateButtons(extension);
-		form.downloadButton.setDisabled(false);
 	}
 
 	/**
@@ -518,6 +522,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			form.installUpdateButton.setDisabled(false);
 			form.uninstallButton.setVisible(false);
 			form.enableDisableButton.setVisible(false);
+			form.downloadButton.setDisabled(false);
 		} else {
 			String installedVersionStr = mExtension.getExtensionVersion();
 			Version installedVersion = Version.parseVersion(installedVersionStr != null ? installedVersionStr : "0.0.0");
@@ -538,9 +543,11 @@ public class ExtensionBrowserFormController implements IFormController {
 			if (mExtension.isBundled()) {
 				form.uninstallButton.setDisabled(true);
 				form.uninstallButton.setTooltiptext(Msg.getMsg(Env.getCtx(), "CannotUninstallBundledExtension")); //Bundled extensions cannot be uninstalled
+				form.downloadButton.setDisabled(true);
 			} else {
 				form.uninstallButton.setDisabled(false);
 				form.uninstallButton.setTooltiptext("");
+				form.downloadButton.setDisabled(false);
 			}
 			
 			if (MExtension.EXTENSIONSTATE_Disabled.equals(mExtension.getExtensionState())) {
@@ -966,7 +973,7 @@ public class ExtensionBrowserFormController implements IFormController {
 					.setOnlyActiveRecords(true)
 					.first();
 			if (mExtension != null) {
-				AEnv.zoom(mExtension.get_Table_ID(), mExtension.getAD_Extension_ID(), null);
+				AEnv.zoom(mExtension.get_Table_ID(), mExtension.getAD_Extension_ID());
 			}
 		}
 	}

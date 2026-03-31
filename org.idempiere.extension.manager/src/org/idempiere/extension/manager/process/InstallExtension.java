@@ -61,7 +61,7 @@ public class InstallExtension extends SvrProcess {
 		// Validate Required Fields
 		if (!extensionMetadata.hasVersion() || !extensionMetadata.hasIDempiereVersion()
 				|| !extensionMetadata.hasName() || !extensionMetadata.hasBundles()) {
-			throw new AdempiereException("metadata.json is missing required fields (name, version, idempiereVersion, bundles)");
+			throw new AdempiereException(Msg.getMsg(Env.getCtx(), "ExtensionMetadataMissingRequiredFields"));
 		}
 		
 		JsonArray bundlesJson = extensionMetadata.getBundles();
@@ -95,7 +95,15 @@ public class InstallExtension extends SvrProcess {
 			addLog(msg);
 		};
 			
-		service.installExtension(extensionMetadata, statusCallback);
+		try {
+			service.installExtension(extensionMetadata, statusCallback);
+		} finally {
+			extension.load(null);
+			if (extension.getExtensionState().equals(MExtension.EXTENSIONSTATE_Installing)) {
+				extension.setExtensionState(MExtension.EXTENSIONSTATE_Error);
+				extension.saveEx();
+			}
+		}
 
 		return "@ExtensionInstallSuccessfully@";
 	}	

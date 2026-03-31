@@ -5,10 +5,10 @@ import java.util.Properties;
 
 public class MPackageImp extends X_AD_Package_Imp {
 
-    public static String PACKAGE_STATUS_INSTALLING = "Installing";
-    public static String PACKAGE_STATUS_UNRESOLVED = "Completed - unresolved";
-    public static String PACKAGE_STATUS_COMPLETED = "Completed successfully";
-    public static String PACKAGE_STATUS_IMPORT_FAILED = "Import Failed";
+    public static final String PACKAGE_STATUS_INSTALLING = "Installing";
+    public static final String PACKAGE_STATUS_UNRESOLVED = "Completed - unresolved";
+    public static final String PACKAGE_STATUS_COMPLETED = "Completed successfully";
+    public static final String PACKAGE_STATUS_IMPORT_FAILED = "Import Failed";
 
 	public MPackageImp(Properties ctx, int AD_Package_Imp_ID, String trxName) {
 		super(ctx, AD_Package_Imp_ID, trxName);

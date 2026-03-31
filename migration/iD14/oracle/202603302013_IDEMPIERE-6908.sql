@@ -5,14 +5,14 @@ SET SQLBLANKLINES ON
 SET DEFINE OFF
 
 -- Mar 30, 2026, 8:13:13 PM GMT+08:00
-INSERT INTO AD_Extension (AD_Client_ID,AD_Org_ID,Created,CreatedBy,Updated,UpdatedBy,IsActive,AD_Extension_ID,ExtensionVersion,ExtensionId,IsBundled,ExtensionMetadata,ExtensionState,AD_Extension_UU,Name) VALUES (0,0,TO_TIMESTAMP('2026-03-30 20:13:13','YYYY-MM-DD HH24:MI:SS'),100,TO_TIMESTAMP('2026-03-30 20:13:13','YYYY-MM-DD HH24:MI:SS'),100,'Y',200001,'12.0.0','org.adempiere.replication','Y','{
+INSERT INTO AD_Extension (AD_Client_ID,AD_Org_ID,Created,CreatedBy,Updated,UpdatedBy,IsActive,AD_Extension_ID,ExtensionVersion,ExtensionId,IsBundled,ExtensionMetadata,ExtensionState,AD_Extension_UU,Name) VALUES (0,0,TO_TIMESTAMP('2026-03-30 20:13:13','YYYY-MM-DD HH24:MI:SS'),100,TO_TIMESTAMP('2026-03-30 20:13:13','YYYY-MM-DD HH24:MI:SS'),100,'Y',200001,'0.0.0','org.adempiere.replication','Y','{
   "id": "org.adempiere.replication",
-  "version": "12.0.0",
-  "idempiereVersion": "12",
+  "version": "0.0.0",
+  "idempiereVersion": "0",
   "releaseDate": "2026-03-30",
   "name": "iDempiere Data Replication",
   "description": "Core engine for synchronizing data between distributed iDempiere instances and databases.",
-  "infoUrl": "https://github.com/idempiere/idempiere/blob/main/org.adempiere.replication/info.md",
+  "infoUrl": "https://github.com/idempiere/idempiere-extension-repository/blob/main/extensions/org.adempiere.replication/info.md",
   "categories": [
     "Core",
     "Data Management",

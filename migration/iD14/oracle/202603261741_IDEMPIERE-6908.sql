@@ -109,7 +109,7 @@ INSERT INTO AD_Message (MsgType,MsgText,AD_Client_ID,AD_Org_ID,IsActive,Created,
 ;
 
 -- Mar 26, 2026, 5:50:48 PM GMT+08:00
-INSERT INTO AD_Message (MsgType,MsgText,AD_Client_ID,AD_Org_ID,IsActive,Created,CreatedBy,Updated,UpdatedBy,AD_Message_ID,Value,EntityType,AD_Message_UU) VALUES ('I','SHA256 hash mismatch for bundle {0}. Expected {1} but got {2}',0,0,'Y',TO_TIMESTAMP('2026-03-26 17:50:47','YYYY-MM-DD HH24:MI:SS'),100,TO_TIMESTAMP('2026-03-26 17:50:47','YYYY-MM-DD HH24:MI:SS'),100,201023,'BundleSHA256HashNotMatch','D','019d298d-bebc-70e9-af7c-e50aac23c64c')
+INSERT INTO AD_Message (MsgType,MsgText,AD_Client_ID,AD_Org_ID,IsActive,Created,CreatedBy,Updated,UpdatedBy,AD_Message_ID,Value,EntityType,AD_Message_UU) VALUES ('E','SHA256 hash mismatch for bundle {0}. Expected {1} but got {2}',0,0,'Y',TO_TIMESTAMP('2026-03-26 17:50:47','YYYY-MM-DD HH24:MI:SS'),100,TO_TIMESTAMP('2026-03-26 17:50:47','YYYY-MM-DD HH24:MI:SS'),100,201023,'BundleSHA256HashNotMatch','D','019d298d-bebc-70e9-af7c-e50aac23c64c')
 ;
 
 -- Mar 26, 2026, 5:51:01 PM GMT+08:00

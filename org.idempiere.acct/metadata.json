@@ -1,11 +1,11 @@
 {
   "id": "org.idempiere.acct",
-  "version": "12.0.0",
-  "idempiereVersion": "12",
+  "version": "0.0.0",
+  "idempiereVersion": "0",
   "releaseDate": "2026-03-30",
   "name": "iDempiere Accounting Engine",
   "description": "Core accounting logic responsible for generating Fact ACCT entries from documents.",
-  "infoUrl": "https://github.com/idempiere/idempiere/blob/main/org.adempiere.acct/info.md",
+  "infoUrl": "https://github.com/idempiere/idempiere/blob/main/org.idempiere.acct/info.md",
   "categories": [
     "Core",
     "Financial",

@@ -112,8 +112,10 @@ public class MarkdownRendererImpl implements IMarkdownRenderer {
 					String attrName = (node instanceof Image) ? "src" : "href";
 					String url = attributes.get(attrName);
 
-					if (url != null && !url.startsWith("http") && !url.startsWith("/")) {
-						attributes.put(attrName, baseURL + url);
+					if (url != null && !url.startsWith("http") && !url.startsWith("/") 
+						&& !url.startsWith("data:") && !url.startsWith("mailto:")) {
+						String base = baseURL.endsWith("/") ? baseURL : baseURL + "/";
+						attributes.put(attrName, base + url);
 					}
 				}
 			}

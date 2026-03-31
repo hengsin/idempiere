@@ -13,7 +13,7 @@
 
 ## ⚙️ Compatibility
 
-* **iDempiere Version:** 12.0 (Core Module)
+* **Core Module**
 * **Java Version:** 17+
 
 ## 📦 Database Changes

@@ -2,14 +2,14 @@
 SELECT register_migration_script('202603302155_IDEMPIERE-6908.sql') FROM dual;
 
 -- Mar 30, 2026, 9:55:04 PM GMT+08:00
-INSERT INTO AD_Extension (AD_Client_ID,AD_Org_ID,Created,CreatedBy,Updated,UpdatedBy,IsActive,AD_Extension_ID,ExtensionVersion,ExtensionId,IsBundled,ExtensionMetadata,ExtensionState,AD_Extension_UU,Name) VALUES (0,0,TO_TIMESTAMP('2026-03-30 21:55:03','YYYY-MM-DD HH24:MI:SS'),100,TO_TIMESTAMP('2026-03-30 21:55:03','YYYY-MM-DD HH24:MI:SS'),100,'Y',200002,'12.0.0','org.idempiere.acct','Y','{
+INSERT INTO AD_Extension (AD_Client_ID,AD_Org_ID,Created,CreatedBy,Updated,UpdatedBy,IsActive,AD_Extension_ID,ExtensionVersion,ExtensionId,IsBundled,ExtensionMetadata,ExtensionState,AD_Extension_UU,Name) VALUES (0,0,TO_TIMESTAMP('2026-03-30 21:55:03','YYYY-MM-DD HH24:MI:SS'),100,TO_TIMESTAMP('2026-03-30 21:55:03','YYYY-MM-DD HH24:MI:SS'),100,'Y',200002,'0.0.0','org.idempiere.acct','Y','{
   "id": "org.idempiere.acct",
-  "version": "12.0.0",
-  "idempiereVersion": "12",
+  "version": "0.0.0",
+  "idempiereVersion": "0",
   "releaseDate": "2026-03-30",
   "name": "iDempiere Accounting Engine",
   "description": "Core accounting logic responsible for generating Fact ACCT entries from documents.",
-  "infoUrl": "https://github.com/idempiere/idempiere/blob/main/org.adempiere.acct/info.md",
+  "infoUrl": "https://github.com/idempiere/idempiere-extension-repository/blob/main/extensions/org.idempiere.acct/info.md",
   "categories": [
     "Core",
     "Financial",

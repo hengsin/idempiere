@@ -8,29 +8,29 @@ public class MPackageImpDetail extends X_AD_Package_Imp_Detail {
 	/**
 	 * Insert new record
 	 */
-	public static String ACTION_INSERT = "New";
+	public static final String ACTION_INSERT = "New";
 	/**
 	 * Update existing record
 	 */
-	public static String ACTION_UPDATE = "Update";
+	public static final String ACTION_UPDATE = "Update";
 	/**
 	 * Execute SQL statement
 	 */
- 	public static String ACTION_EXECUTE = "Execute";
+ 	public static final String ACTION_EXECUTE = "Execute";
  	
 	/**
 	 * Validate DB Index
 	 */
- 	public static String ACTION_VALIDATE = "Validate";
+ 	public static final String ACTION_VALIDATE = "Validate";
 
 	/**
 	 * Success value for the "Success" column
 	 */
-	public static String ACTION_STATUS_SUCCESS = "Success";
+	public static final String ACTION_STATUS_SUCCESS = "Success";
 	/**
 	 * Failure value for the "Failure" column
 	 */
-	public static String ACTION_STATUS_FAILURE = "Failure";
+	public static final String ACTION_STATUS_FAILURE = "Failure";
 
 	
 	public MPackageImpDetail(Properties ctx, int AD_Package_Imp_Detail_ID, String trxName) {

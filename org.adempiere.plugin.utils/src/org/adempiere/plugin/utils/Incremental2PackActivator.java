@@ -189,12 +189,14 @@ public class Incremental2PackActivator extends AbstractActivator {
 
 		boolean success = true;
 		boolean cacheReset = false;
+
 		if (!list.isEmpty()) {
 			String csv = list.stream().map(e -> e.url.toString()).collect(Collectors.joining(","));
 			Event event = EventManager.newEvent(IEventTopics.PRE_INCREMENTAL_PACK_IN, 
 				new String[] {getName(), csv}, true);
 			EventManager.getInstance().sendEvent(event);
 		}
+		
 		try {
 			if (getDBLock()) {
 				for(TwoPackEntry entry : list) {
@@ -216,8 +218,11 @@ public class Incremental2PackActivator extends AbstractActivator {
 			releaseLock();
 		}
 
-		Event event = EventManager.newEvent(IEventTopics.POST_INCREMENTAL_PACK_IN, new Object[] {getName(), success}, true);
-		EventManager.getInstance().postEvent(event);
+		if (!list.isEmpty()) {
+			Event event = EventManager.newEvent(IEventTopics.POST_INCREMENTAL_PACK_IN, new Object[] {getName(), success}, true);
+			EventManager.getInstance().postEvent(event);
+		}
+
 		if (logger.isLoggable(Level.INFO))
 			logger.log(Level.INFO, "Cache Reset: " + cacheReset);
 		if (cacheReset)

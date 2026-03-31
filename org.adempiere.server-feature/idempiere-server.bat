@@ -13,7 +13,7 @@ goto START
 @Set JAVA=%JAVA_HOME%\bin\java
 
 IF NOT DEFINED IDEMPIERE_EXTENSION_REPOSITORY (
-    SET IDEMPIERE_EXTENSION_REPOSITORY="https://github.com/idempiere/idempiere-extension-repository"
+    SET IDEMPIERE_EXTENSION_REPOSITORY=https://github.com/idempiere/idempiere-extension-repository
 )
 
 :START

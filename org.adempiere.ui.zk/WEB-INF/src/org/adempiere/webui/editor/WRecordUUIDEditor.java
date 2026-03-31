@@ -111,8 +111,11 @@ public class WRecordUUIDEditor extends WRecordEditor<String> {
 
 	@Override
 	protected void setValue(Object value, boolean fire) {
-		if (value == null)
+		if (value == null) {
 			super.setValue(value, fire);
+			return;
+		}
+
 		Integer id = null;
 		if (value instanceof Integer integerId) {
 			id = integerId;
