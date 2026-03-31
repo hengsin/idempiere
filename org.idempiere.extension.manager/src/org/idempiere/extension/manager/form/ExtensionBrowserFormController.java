@@ -61,6 +61,8 @@ import org.zkoss.zul.Filedownload;
 import org.zkoss.zul.Html;
 import org.zkoss.zul.Label;
 import org.zkoss.zul.Hlayout;
+import org.zkoss.zul.Combobox;
+import org.zkoss.zul.Comboitem;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Tabbox;
 import org.zkoss.zul.Tabs;
@@ -375,20 +377,20 @@ public class ExtensionBrowserFormController implements IFormController {
 		// Installation section
 		sb.append("<section>");
 		sb.append("<h3>Installation</h3>");
-		sb.append("<div><label>ID</label><code>").append(id).append("</code></div>");
+		sb.append("<div><label>ID</label><code>").append(AEnv.sanitize(id)).append("</code></div>");
 		
 		String placeholderId = null;
 		if (extension.getVersions().size() > 1 && form.repositoryTab.isSelected()) {
 			placeholderId = "vc-" + UUID.randomUUID().toString();
 			sb.append("<div id=\"%s\"><label>%s</label></div>".formatted(placeholderId, Msg.getMsg(Env.getCtx(), "Version")));
 		} else {
-			sb.append("<div><label>%s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Version"))).append(version).append("</span></div>");
+			sb.append("<div><label>%s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Version"))).append(AEnv.sanitize(version)).append("</span></div>");
 		}
 
 		if (extension.hasIDempiereVersion()) {
 			sb.append("<div><label>iDempiere %s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Version"))).append(extension.getIDempiereVersion()).append("</span></div>");
 		}
-		sb.append("<div><label>%s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Updated"))).append(lastUpdated).append("</span></div>");
+		sb.append("<div><label>%s</label><span>".formatted(Msg.getMsg(Env.getCtx(), "Updated"))).append(AEnv.sanitize(lastUpdated)).append("</span></div>");
 		sb.append("</section>");
 
 		// Database section
@@ -400,16 +402,16 @@ public class ExtensionBrowserFormController implements IFormController {
 				com.google.gson.JsonObject db = dbEl.getAsJsonObject();
 				String dbId = db.get("id").getAsString();
 				String dbVersion = db.has("version") ? db.get("version").getAsString() : null;
-				sb.append("<div><label style=\"text-transform: capitalize;\">").append(dbId).append("</label>");
+				sb.append("<div><label style=\"text-transform: capitalize;\">").append(AEnv.sanitize(dbId)).append("</label>");
 				if (dbVersion != null) {
-					sb.append("<span>").append(dbVersion).append("</span>");
+					sb.append("<span>").append(AEnv.sanitize(dbVersion)).append("</span>");
 				}
 				sb.append("</div>");
 				if (db.has("extensions")) {
 					com.google.gson.JsonArray dbExts = db.getAsJsonArray("extensions");
 					sb.append("<div class=\"tags\" style=\"margin-top: 5px; margin-left: 10px;\">");
 					for (com.google.gson.JsonElement de : dbExts) {
-						sb.append("<span class=\"tag\">").append(de.getAsString()).append("</span>");
+						sb.append("<span class=\"tag\">").append(AEnv.sanitize(de.getAsString())).append("</span>");
 					}
 					sb.append("</div>");
 				}
@@ -424,7 +426,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			sb.append("<ul>");
 			JsonArray categories = extension.getCategories();
 			for (JsonElement cat : categories) {
-				sb.append("<li><span></span>").append(cat.getAsString()).append("</li>");
+				sb.append("<li><span></span>").append(AEnv.sanitize(cat.getAsString())).append("</li>");
 			}
 			sb.append("</ul></section>");
 		}
@@ -437,7 +439,7 @@ public class ExtensionBrowserFormController implements IFormController {
 			JsonArray tags = extension.getTags();
 			for (JsonElement tag : tags) {
 				sb.append("<span class=\"tag\">")
-				  .append(tag.getAsString()).append("</span>");
+				  .append(AEnv.sanitize(tag.getAsString())).append("</span>");
 			}
 			sb.append("</div></section>");
 		}
@@ -450,7 +452,7 @@ public class ExtensionBrowserFormController implements IFormController {
 		asideDiv.appendChild(html);
 
 		if (extension.getVersions().size() > 1 && form.repositoryTab.isSelected()) {
-			org.zkoss.zul.Combobox versionBox = new org.zkoss.zul.Combobox();
+			Combobox versionBox = new Combobox();
 			versionBox.setReadonly(true);
 			versionBox.setSclass("version-select");
 			// versionBox.setStyle("width: 100%; margin-bottom: 10px;");
@@ -460,7 +462,7 @@ public class ExtensionBrowserFormController implements IFormController {
 				JsonObject v = versions.get(i).getAsJsonObject();
 				String vStr = v.get("version").getAsString();
 				String vUrl = v.get("metadataUrl").getAsString();
-				org.zkoss.zul.Comboitem item = new org.zkoss.zul.Comboitem(vStr);
+				Comboitem item = new Comboitem(vStr);
 				item.setValue(vUrl);
 				versionBox.appendChild(item);
 				if (version.equals(vStr)) {

@@ -656,20 +656,25 @@ public class ExtensionBrowserService {
 	 * @param extension
 	 */
 	public void handleInstallationFailure(ExtensionMetadata extension) {
-		String extensionId = extension.getId();
-		if (extensionId != null) {
-			MExtension mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
-					.setParameters(extensionId)
-					.first();
-			if (mExtension != null) {
-				mExtension.setExtensionState(MExtension.EXTENSIONSTATE_Error);
-				mExtension.saveEx();
-			}
-		}
 		try {
-			uninstallBundles(extension);
+			String extensionId = extension.getId();
+			if (extensionId != null) {
+				MExtension mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
+						.setParameters(extensionId)
+						.first();
+				if (mExtension != null) {
+					mExtension.setExtensionState(MExtension.EXTENSIONSTATE_Error);
+					mExtension.saveEx();
+				}
+			}
 		} catch (Exception e) {
-			log.log(Level.WARNING, "Failed to cleanup bundles after installation failure", e);
+			log.log(Level.SEVERE, "Failed to update extension state to Error", e);
+		} finally {
+			try {
+				uninstallBundles(extension);
+			} catch (Exception e) {
+				log.log(Level.SEVERE, "Failed to cleanup bundles after installation failure", e);
+			}
 		}
 	}
 

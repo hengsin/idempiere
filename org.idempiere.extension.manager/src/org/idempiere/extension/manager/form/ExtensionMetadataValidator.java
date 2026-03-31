@@ -22,7 +22,8 @@ import com.google.gson.JsonSyntaxException;
  */
 public class ExtensionMetadataValidator {
 
-	private static final Pattern VERSION_PATTERN = Pattern.compile("^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9]+)?$");
+	private static final String OSGI_VERSION_PATTERN = "^[0-9]+\\.[0-9]+\\.[0-9]+(\\.[a-zA-Z0-9_-]+)?$";
+	private static final Pattern VERSION_PATTERN = Pattern.compile(OSGI_VERSION_PATTERN);
 
 	/**
 	 * Validates the metadata JSON string.
@@ -67,7 +68,7 @@ public class ExtensionMetadataValidator {
 			if (validateString(root.get("version"), "version", errors)) {
 				String version = root.get("version").getAsString();
 				if (!VERSION_PATTERN.matcher(version).matches()) {
-					errors.add("Property 'version' must match pattern ^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9]+)?$");
+					errors.add("Property 'version' must match OSGi version pattern " + OSGI_VERSION_PATTERN);
 				}
 			}
 		}

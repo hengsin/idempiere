@@ -107,7 +107,7 @@ public class ExtensionMetadata {
 	}
 
 	public boolean hasChangeLogUrl() {
-		return json.has("changeLogUrl");
+		return json.has("changeLogUrl") && !json.get("changeLogUrl").isJsonNull();
 	}
 
 	public String getChangeLogUrl() {

@@ -10,8 +10,8 @@
     },
     "version": {
       "type": "string",
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9]+)?$",
-      "description": "Semantic versioning string (e.g., 1.0.0)."
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(\\.[a-zA-Z0-9_-]+)?$",
+      "description": "OSGi versioning string (e.g., 1.0.0, 1.0.0.20260331)."
     },
     "idempiereVersion": {
       "type": "string",
