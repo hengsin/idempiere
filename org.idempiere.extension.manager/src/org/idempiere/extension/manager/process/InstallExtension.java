@@ -25,6 +25,8 @@ import org.adempiere.base.annotation.Process;
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.util.Callback;
 import org.compiere.model.MExtension;
+import org.compiere.model.MExtensionEntity;
+import org.compiere.model.Query;
 import org.compiere.process.SvrProcess;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
@@ -58,6 +60,15 @@ public class InstallExtension extends SvrProcess {
 		var extensionMetadata = new ExtensionMetadata(metadata);
 		var service = new ExtensionBrowserService();		
 		
+		// Check whether the extension have been uninstall earlier
+		Query query = new Query(Env.getCtx(), MExtensionEntity.Table_Name, "AD_Extension_ID=?", null);
+		int count = query.setParameters(extension.getAD_Extension_ID())
+			.setOnlyActiveRecords(true)
+			.count();
+		if (count > 0) {
+			service.enableExtensionEntities(extension);
+		}
+
 		// Validate Required Fields
 		if (!extensionMetadata.hasVersion() || !extensionMetadata.hasIDempiereVersion()
 				|| !extensionMetadata.hasName() || !extensionMetadata.hasBundles()) {

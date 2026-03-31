@@ -290,18 +290,26 @@ public class ExtensionBrowserService {
 	 * @throws Exception
 	 */
 	public void uninstallExtension(ExtensionMetadata extension) throws Exception {
-		uninstallBundles(extension);
 		String extensionId = extension.getId();
+		MExtension mExtension = null;
 		if (extensionId != null) {
-			MExtension mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
+			mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
 					.setParameters(extensionId)
 					.setOnlyActiveRecords(true)
 					.first();
-			if (mExtension != null) {
-				mExtension.setExtensionState(MExtension.EXTENSIONSTATE_Uninstalled);
-				mExtension.saveEx();
-			}
 		}
+		if (mExtension == null) {
+			throw new AdempiereException("Extension not found: " + extensionId);				
+		}
+		
+		try {
+			disableExtensionEntities(mExtension);
+		} catch (Exception e) {
+			log.log(Level.SEVERE, "Error disabling extension entities for " + extensionId, e);
+		}
+		uninstallBundles(extension);
+		mExtension.setExtensionState(MExtension.EXTENSIONSTATE_Uninstalled);
+		mExtension.saveEx();
 	}
 
 	/**
@@ -333,19 +341,23 @@ public class ExtensionBrowserService {
 				mExtension.setExtensionState(MExtension.EXTENSIONSTATE_Disabled);
 				mExtension.saveEx();
 				
-				List<MExtensionEntity> entities = new Query(Env.getCtx(), MExtensionEntity.Table_Name, "AD_Extension_ID=?", null)
-						.setParameters(mExtension.getAD_Extension_ID())
-						.list();
-				for (MExtensionEntity entity : entities) {
-					PO po = MTable.get(Env.getCtx(), entity.getAD_Table_ID()).getPOByUU(entity.getRecord_UU(), null);
-					if (po != null) {
-						po.set_Value("IsActive", false);
-						po.saveEx();
-					}
-				}
+				disableExtensionEntities(mExtension);
 			}
 		}
 		CacheMgt.get().reset();
+	}
+
+	private void disableExtensionEntities(MExtension mExtension) {
+		List<MExtensionEntity> entities = new Query(Env.getCtx(), MExtensionEntity.Table_Name, "AD_Extension_ID=?", null)
+				.setParameters(mExtension.getAD_Extension_ID())
+				.list();
+		for (MExtensionEntity entity : entities) {
+			PO po = MTable.get(Env.getCtx(), entity.getAD_Table_ID()).getPOByUU(entity.getRecord_UU(), null);
+			if (po != null) {
+				po.set_Value("IsActive", false);
+				po.saveEx();
+			}
+		}
 	}
 
 	/**
@@ -354,6 +366,20 @@ public class ExtensionBrowserService {
 	 * @throws Exception
 	 */
 	public void enableExtension(ExtensionMetadata extension) throws Exception {
+		String extensionId = extension.getId();
+		MExtension mExtension = null;
+		if (extensionId != null) {
+			mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
+					.setParameters(extensionId)
+					.setOnlyActiveRecords(true)
+					.first();
+		}
+		if (mExtension == null) {
+			throw new AdempiereException("Extension not found: " + extensionId);				
+		}
+
+		validateDependencies(extension);
+
 		if (extension.hasBundles()) {
 			JsonArray bundles = extension.getBundles();
 			for (JsonElement bel : bundles) {
@@ -368,28 +394,30 @@ public class ExtensionBrowserService {
 				}
 			}
 		}
-		String extensionId = extension.getId();
-		if (extensionId != null) {
-			MExtension mExtension = new Query(Env.getCtx(), MExtension.Table_Name, "ExtensionId=?", null)
-					.setParameters(extensionId)
-					.first();
-			if (mExtension != null) {
-				mExtension.setExtensionState(MExtension.EXTENSIONSTATE_Installed);
-				mExtension.saveEx();
-				
-				List<MExtensionEntity> entities = new Query(Env.getCtx(), MExtensionEntity.Table_Name, "AD_Extension_ID=?", null)
-						.setParameters(mExtension.getAD_Extension_ID())
-						.list();
-				for (MExtensionEntity entity : entities) {
-					PO po = MTable.get(Env.getCtx(), entity.getAD_Table_ID()).getPOByUU(entity.getRecord_UU(), null);
-					if (po != null) {
-						po.set_Value("IsActive", true);
-						po.saveEx();
-					}
-				}
+		
+		mExtension.setExtensionState(MExtension.EXTENSIONSTATE_Installed);
+		mExtension.saveEx();
+		
+		enableExtensionEntities(mExtension);
+		
+		CacheMgt.get().reset();
+	}
+
+	/**
+	 * Set extension entities to active
+	 * @param mExtension
+	 */
+	public void enableExtensionEntities(MExtension mExtension) {
+		List<MExtensionEntity> entities = new Query(Env.getCtx(), MExtensionEntity.Table_Name, "AD_Extension_ID=?", null)
+				.setParameters(mExtension.getAD_Extension_ID())
+				.list();
+		for (MExtensionEntity entity : entities) {
+			PO po = MTable.get(Env.getCtx(), entity.getAD_Table_ID()).getPOByUU(entity.getRecord_UU(), null);
+			if (po != null) {
+				po.set_Value("IsActive", true);
+				po.saveEx();
 			}
 		}
-		CacheMgt.get().reset();
 	}
 
 	/**
@@ -711,6 +739,86 @@ public class ExtensionBrowserService {
 					//Incompatible dependency version: {0}. Required {1} and above but installed {2}
 					throw new AdempiereException(Msg.getMsg(Env.getCtx(), "IncompatibleDependencyVersion", new Object[] {depId, depVersionStr, depExt.getExtensionVersion()}));
 				}
+			}
+		}
+	}
+
+	/**
+	 * Validate no other extension depends on this extension
+	 * @param metadata
+	 * @throws AdempiereException if validation fail
+	 */
+	public void validateNoDependentExtensions(ExtensionMetadata metadata) {
+		String extensionId = metadata.getId();
+		String sql = null;
+		Object[] params = null;
+		
+		if (DB.isPostgreSQL()) {
+			sql = "SELECT Name FROM AD_Extension " +
+				  "WHERE jsonb_path_exists(ExtensionMetadata, '$.dependencies[*].id ? (@ == $extId)', CAST(? AS jsonb)) " +
+				  "AND ExtensionState = 'IN' " +
+				  "AND ExtensionId != ? AND IsActive='Y' AND AD_Client_ID=0";
+			String jsonVars = "{\"extId\": \"" + extensionId + "\"}";
+			params = new Object[] { jsonVars, extensionId };
+		} else if (DB.isOracle()) {
+			sql = "SELECT Name FROM AD_Extension " +
+				  "WHERE JSON_EXISTS(ExtensionMetadata, '$.dependencies[*]?(@.id == $extId)' PASSING ? AS \"extId\") " +
+				  "AND ExtensionState = 'IN' " +
+				  "AND ExtensionId != ? AND IsActive='Y' AND AD_Client_ID=0";
+			params = new Object[] { extensionId, extensionId };
+		}
+		
+		if (sql != null) {
+			List<String> dependents = new ArrayList<>();
+			try (java.sql.PreparedStatement pstmt = DB.prepareStatement(sql, null)) {
+				for (int i = 0; i < params.length; i++) {
+					pstmt.setObject(i + 1, params[i]);
+				}
+				try (java.sql.ResultSet rs = pstmt.executeQuery()) {
+					while (rs.next()) {
+						dependents.add(rs.getString(1));
+					}
+				}
+			} catch (Exception e) {
+				log.log(Level.SEVERE, "Failed to execute dependency validation SQL: " + sql, e);
+				throw new AdempiereException("Failed to validate dependencies via SQL: " + e.getMessage());
+			}
+			
+			if (!dependents.isEmpty()) {
+				// Cannot uninstall extension {0} because the following extensions depend on it: {1}
+				throw new AdempiereException(Msg.getMsg(Env.getCtx(), "ExtensionHasDependents", new Object[] {metadata.getName(), String.join(", ", dependents)}));
+			}
+		} else {
+			// Fallback to slower Java-based check for other databases
+			List<MExtension> installedExtensions = getInstalledExtensions();
+			List<String> dependents = new ArrayList<>();
+			for (MExtension ext : installedExtensions) {
+				if (ext.getExtensionId().equals(extensionId)) {
+					continue;
+				}
+				String metadataJson = ext.getExtensionMetadata();
+				if (metadataJson == null || metadataJson.isEmpty()) {
+					continue;
+				}
+				try {
+					ExtensionMetadata extMetadata = new ExtensionMetadata(JsonParser.parseString(metadataJson).getAsJsonObject());
+					if (extMetadata.hasDependencies()) {
+						JsonArray dependencies = extMetadata.getDependencies();
+						for (JsonElement depEl : dependencies) {
+							JsonObject depObj = depEl.getAsJsonObject();
+							if (depObj.has("id") && extensionId.equals(depObj.get("id").getAsString())) {
+								dependents.add(ext.getName());
+								break;
+							}
+						}
+					}
+				} catch (Exception e) {
+					log.log(Level.WARNING, "Failed to parse metadata for extension: " + ext.getExtensionId(), e);
+				}
+			}
+			if (!dependents.isEmpty()) {
+				// Cannot uninstall extension {0} because the following extensions depend on it: {1}
+				throw new AdempiereException(Msg.getMsg(Env.getCtx(), "ExtensionHasDependents", new Object[] {metadata.getName(), String.join(", ", dependents)}));
 			}
 		}
 	}

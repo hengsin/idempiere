@@ -50,6 +50,7 @@ public class UninstallExtension extends SvrProcess {
 		}
 		ExtensionMetadata metadata = new ExtensionMetadata(JsonParser.parseString(extension.getExtensionMetadata()).getAsJsonObject());
 		ExtensionBrowserService service = new ExtensionBrowserService();
+		service.validateNoDependentExtensions(metadata);
 		service.uninstallExtension(metadata);
 		return "@ExtensionUninstallSuccessfully@";
 	}

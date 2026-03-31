@@ -51,6 +51,7 @@ public class DisableExtension extends SvrProcess {
 		
 		ExtensionMetadata metadata = new ExtensionMetadata(JsonParser.parseString(extension.getExtensionMetadata()).getAsJsonObject());
 		ExtensionBrowserService service = new ExtensionBrowserService();
+		service.validateNoDependentExtensions(metadata);
 		service.disableExtension(metadata);
 		return "@ExtensionDisableSuccessfully@";
 	}
