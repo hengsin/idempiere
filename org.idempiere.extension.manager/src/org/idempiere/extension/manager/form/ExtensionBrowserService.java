@@ -145,8 +145,16 @@ public class ExtensionBrowserService {
 			return renderer.renderToHtml(markdown, true, baseUrl);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Failed to fetch or render documentation from " + rawUrl, e);
-			return "<div style=\"padding: 20px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;\">" +
-					"<h4>%s</h4><p>" + e.getMessage() + "</p></div>".formatted(Msg.getMsg(Env.getCtx(), "Error"));
+			String safeMessage = e.getMessage() == null ? "" : e.getMessage()
+					.replace("&", "&amp;")
+					.replace("<", "&lt;")
+					.replace(">", "&gt;")
+					.replace("\"", "&quot;")
+					.replace("'", "&#39;");
+			return (
+					"<div style=\"padding: 20px; color: '#721c24'; background-color: '#f8d7da'; border: 1px solid '#f5c6cb'; border-radius: 4px;\">" +
+					"<h4>%s</h4><p>%s</p></div>"
+					).formatted(Msg.getMsg(Env.getCtx(), "Error"), safeMessage);
 		}
 	}
 
@@ -164,7 +172,12 @@ public class ExtensionBrowserService {
 		HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 		
 		if (response.statusCode() == 200) {
-			JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+			String responseBody = response.body();
+			List<String> errors = ExtensionMetadataValidator.validate(responseBody);
+			if (!errors.isEmpty()) {
+				throw new AdempiereException("Metadata Validation Error:\n" + String.join("\n", errors));
+			}
+			JsonObject json = JsonParser.parseString(responseBody).getAsJsonObject();
 			return new ExtensionMetadata(json);
 		} else {
 			throw new RuntimeException(Msg.getMsg(Env.getCtx(), "HttpFetchFailed", new Object[] {response.statusCode(), rawUrl}));
