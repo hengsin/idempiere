@@ -76,7 +76,18 @@ After installation, navigate to **System Admin > Tenant > Report PDF Configurati
 ## Metadata
 
 ### Json Schema
-[metadata-schema.json](metadata-schema.json)
+- [metadata-schema.json](metadata-schema.json)
+
+### Version Range Validation
+- idempiereVersion and version in dependencies must follow the range syntax in https://docs.osgi.org/whitepaper/semantic-versioning/040-semantic-versions.html
+- idempiereVersion will be used to check the compatibility of the extension with the iDempiere version.
+- version in dependencies will be used to check the compatibility with installed extension.
+- version in database is using the at least version syntax. 
+
+### Database Requirement Validation
+- The database property is optional.
+- When use, the extension metadata must explicitly list all database type that's compatible with this extension.
+- The extensions validation is only implemented for PostgreSQL. It is a availability check and it is the responsibility of the extension to ensure the required extension is installed.
 
 ### Example metadata
 ```json
@@ -108,11 +119,11 @@ After installation, navigate to **System Admin > Tenant > Report PDF Configurati
     }
   ],
   "database": [
-	{
-		"id": "postgresql",
-		"version": "17",
-		"extensions": ["vector"]
-	}
+    {
+      "id": "postgresql",
+      "version": "17",
+      "extensions": ["vector"]
+    }
   ]
 }
 ```
