@@ -649,7 +649,7 @@ public class ExtensionBrowserFormController implements IFormController {
 		String label = form.installUpdateButton.getLabel();
 		
 		if (Msg.getMsg(Env.getCtx(), "Install").equals(label)) {
-			onInstall();
+			onInstall(extension);
 		} else if (Msg.getMsg(Env.getCtx(), "Update").equals(label)) {
 			onUpdate(extension);
 		}
@@ -726,9 +726,9 @@ public class ExtensionBrowserFormController implements IFormController {
 		
 		ExtensionMetadata extension = selectedExtension;
 		String label = form.enableDisableButton.getLabel();
-		if ("Disable".equals(label)) {
+		if (Msg.getMsg(Env.getCtx(), "Disable").equals(label)) {
 			onDisable(extension);
-		} else if ("Enable".equals(label)) {
+		} else if (Msg.getMsg(Env.getCtx(), "Enable").equals(label)) {
 			onEnable(extension);
 		}
 	}
@@ -739,8 +739,9 @@ public class ExtensionBrowserFormController implements IFormController {
 	 */
 	private void onUpdate(ExtensionMetadata extension) {
 		try {
+			//need to uninstall first before install
 			service.uninstallBundles(extension);
-			onInstall();
+			onInstall(extension);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "Update cleanup failed", e);
 			showNotification(Msg.getMsg(Env.getCtx(), "Error") + e.getMessage(), "error");
@@ -750,11 +751,7 @@ public class ExtensionBrowserFormController implements IFormController {
 	/**
 	 * Install currently selected extension
 	 */
-	private void onInstall() {
-		if (selectedExtension == null) return;
-		
-		ExtensionMetadata extension = selectedExtension;
-
+	private void onInstall(ExtensionMetadata extension) {
 		try {
 			MExtension mExtension = service.prepareInstall(extension);
 			MProcess process = new Query(Env.getCtx(), MProcess.Table_Name, "Classname=?", null)

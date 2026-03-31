@@ -31,6 +31,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -256,13 +257,16 @@ public class ExtensionBrowserService {
 		//validate version
 		if (dbObject.has("version")) {
 			String version = dbObject.get("version").getAsString();
-			DatabaseMetaData dbmd = DB.getConnection().getMetaData();
-			String fullVersion = dbmd.getDatabaseProductVersion();
-			Version requiredVersion = Version.parseVersion(version);
-			Version currentVersion = Version.parseVersion(fullVersion.indexOf(" ") > 0 ? fullVersion.substring(0, fullVersion.indexOf(" ")) : fullVersion);
-			if (currentVersion.compareTo(requiredVersion) < 0)
-				//{0} version {1} is too old, {2} and above is required
-				return Msg.getMsg(Env.getCtx(), "DatabaseVersionTooOld", new Object[] {DB.getDatabase().getName(), currentVersion, requiredVersion});
+			try (Connection conn = DB.getConnection()) {
+				DatabaseMetaData dbmd = conn.getMetaData();
+				String fullVersion = dbmd.getDatabaseProductVersion();
+				Version requiredVersion = Version.parseVersion(version);
+				Version currentVersion = Version.parseVersion(fullVersion.indexOf(" ") > 0 ? fullVersion.substring(0, fullVersion.indexOf(" ")) : fullVersion);
+				if (currentVersion.compareTo(requiredVersion) < 0) {
+					//{0} version {1} is too old, {2} and above is required
+					return Msg.getMsg(Env.getCtx(), "DatabaseVersionTooOld", new Object[] {DB.getDatabase().getName(), currentVersion, requiredVersion});
+				}
+			}
 		}
 
 		//validate PostgreSQL extensions
@@ -564,6 +568,9 @@ public class ExtensionBrowserService {
 					}
 				}
 			}
+		}).exceptionally(e -> {
+			log.log(Level.SEVERE, "Failed to sync extension entities for " + extension.getId(), e);
+			return null;
 		});
 	}
 

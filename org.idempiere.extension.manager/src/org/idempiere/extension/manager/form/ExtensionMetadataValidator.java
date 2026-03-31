@@ -60,7 +60,7 @@ public class ExtensionMetadataValidator {
 			}
 		}
 
-		// Validae properties
+		// Validate properties
 		if (root.has("id")) validateString(root.get("id"), "id", errors);
 		
 		if (root.has("version")) {

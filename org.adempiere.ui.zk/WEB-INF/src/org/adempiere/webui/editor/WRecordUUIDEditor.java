@@ -116,6 +116,11 @@ public class WRecordUUIDEditor extends WRecordEditor<String> {
 			return;
 		}
 
+		// mirror parent lazy init
+		if (tableIDValue == null && tableIDGridField != null) {
+			tableIDValue = tableIDGridField.getValue();
+		}
+
 		Integer id = null;
 		if (value instanceof Integer integerId) {
 			id = integerId;

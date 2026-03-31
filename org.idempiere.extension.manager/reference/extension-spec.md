@@ -79,7 +79,7 @@ After installation, navigate to **System Admin > Tenant > Report PDF Configurati
 [metadata-schema.json](metadata-schema.json)
 
 ### Example metadata
-```
+```json
 {
   "id": "com.example.extension.name",
   "version": "1.0.0",
