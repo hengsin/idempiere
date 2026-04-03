@@ -582,7 +582,8 @@ public class ExtensionBrowserService {
 	 * @param extension
 	 */
 	public void syncExtensionEntities(MExtension mExtension, ExtensionMetadata extension) {
-		final Properties ctx = ServerContext.getCurrentInstance();
+		final Properties ctx = new Properties();
+		ctx.putAll(ServerContext.getCurrentInstance());
 		CompletableFuture.runAsync(() -> {
 			try {
 				ServerContext.setCurrentInstance(ctx);
