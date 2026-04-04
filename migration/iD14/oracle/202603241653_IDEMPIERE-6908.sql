@@ -223,10 +223,6 @@ ALTER TABLE AD_Extension MODIFY ExtensionVersion VARCHAR2(30 CHAR)
 ;
 
 -- Mar 24, 2026, 5:06:00 PM GMT+08:00
-ALTER TABLE AD_Extension MODIFY ExtensionMetadata CLOB CONSTRAINT AD_Extension_ExtensionMetadata_isjson CHECK (ExtensionMetadata IS JSON)
-;
-
--- Mar 24, 2026, 5:06:00 PM GMT+08:00
 ALTER TABLE AD_Extension ADD Name VARCHAR2(255 CHAR) NOT NULL
 ;
 
