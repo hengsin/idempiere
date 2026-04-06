@@ -53,6 +53,7 @@ import org.compiere.model.MExtension;
 import org.compiere.model.MExtensionEntity;
 import org.compiere.model.MTable;
 import org.compiere.model.PO;
+import org.compiere.model.POInfo;
 import org.compiere.model.MPackageImp;
 import org.compiere.model.MPackageImpDetail;
 import org.compiere.model.Query;
@@ -367,10 +368,18 @@ public class ExtensionBrowserService {
 				.setParameters(mExtension.getAD_Extension_ID())
 				.list();
 		for (MExtensionEntity entity : entities) {
-			PO po = MTable.get(Env.getCtx(), entity.getAD_Table_ID()).getPOByUU(entity.getRecord_UU(), null);
+			MTable table = MTable.get(Env.getCtx(), entity.getAD_Table_ID());
+			if (table == null)
+				continue;
+			POInfo poInfo = POInfo.getPOInfo(Env.getCtx(), table.getAD_Table_ID());
+			if (poInfo == null || poInfo.getTableName() == null)
+				continue;
+			PO po = table.getPOByUU(entity.getRecord_UU(), null);
 			if (po != null) {
-				po.set_Value("IsActive", false);
-				po.saveEx();
+				if (po.get_ColumnIndex("IsActive") >= 0) {
+					if (po.set_Value("IsActive", false))
+						po.saveEx();
+				}
 			}
 		}
 	}
@@ -427,10 +436,18 @@ public class ExtensionBrowserService {
 				.setParameters(mExtension.getAD_Extension_ID())
 				.list();
 		for (MExtensionEntity entity : entities) {
-			PO po = MTable.get(Env.getCtx(), entity.getAD_Table_ID()).getPOByUU(entity.getRecord_UU(), null);
+			MTable table = MTable.get(Env.getCtx(), entity.getAD_Table_ID());
+			if (table == null)
+				continue;
+			POInfo poInfo = POInfo.getPOInfo(Env.getCtx(), table.getAD_Table_ID());
+			if (poInfo == null || poInfo.getTableName() == null)
+				continue;
+			PO po = table.getPOByUU(entity.getRecord_UU(), null);
 			if (po != null) {
-				po.set_Value("IsActive", true);
-				po.saveEx();
+				if (po.get_ColumnIndex("IsActive") >= 0) {
+					if (po.set_Value("IsActive", true))
+						po.saveEx();
+				}
 			}
 		}
 	}
