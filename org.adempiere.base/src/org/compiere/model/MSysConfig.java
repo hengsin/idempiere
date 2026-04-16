@@ -93,6 +93,8 @@ public class MSysConfig extends X_AD_SysConfig
     public static final String CHART_MIN_WIDTH_6_PERIOD = "CHART_MIN_WIDTH_6_PERIOD";
     public static final String CHECK_CREDIT_ON_CASH_POS_ORDER = "CHECK_CREDIT_ON_CASH_POS_ORDER";
     public static final String CHECK_CREDIT_ON_PREPAY_ORDER = "CHECK_CREDIT_ON_PREPAY_ORDER";
+    public static final String CKEDITOR_FILE_CONFIG = "CKEDITOR_FILE_CONFIG";
+    public static final String CKEDITOR_FILE_CONFIG_MIN = "CKEDITOR_FILE_CONFIG_MIN";
     public static final String CLIENT_ACCOUNTING = "CLIENT_ACCOUNTING";
 	public static final String COPY_TENANT_BATCH_FLUSH_SIZE = "COPY_TENANT_BATCH_FLUSH_SIZE";
     public static final String CSV_EXPORT_SANITIZATION = "CSV_EXPORT_SANITIZATION";
@@ -111,6 +113,8 @@ public class MSysConfig extends X_AD_SysConfig
     public static final String DPViews_ShowInfoSchedule = "DPViews_ShowInfoSchedule";
     public static final String EMAIL_NOTIFY_2PACK = "EMAIL_NOTIFY_2PACK";
     public static final String EMAIL_SERVER_START_ENABLED = "EMAIL_SERVER_START_ENABLED";
+    public static final String EMAIL_SERVER_START_MAILTEXT_ID = "EMAIL_SERVER_START_MAILTEXT_ID";
+    public static final String EMAIL_SERVER_START_RECIPIENT = "EMAIL_SERVER_START_RECIPIENT";
     public static final String EMAIL_TEST_MAILTEXT_ID = "EMAIL_TEST_MAILTEXT_ID";
     public static final String ENABLE_PAYMENTBOX_BUTTON = "ENABLE_PAYMENTBOX_BUTTON";
     public static final String ENABLE_SSO = "ENABLE_SSO";

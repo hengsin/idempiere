@@ -25,6 +25,7 @@
 package org.compiere.util;
 
 import java.beans.Expression;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
@@ -104,7 +105,14 @@ public class DefaultEvaluatee implements Evaluatee {
 	public DefaultEvaluatee(PO po) {
 		this(new PODataProvider(po));
 	}
-	
+
+	/**
+	 * @param Java bean
+	 */
+	public DefaultEvaluatee(Object bean) {
+		this(new JavaBeanDataProvider(bean));
+	}
+
 	/**
 	 * Help to use variable from window context 
 	 * @param dataProvider
@@ -649,5 +657,51 @@ public class DefaultEvaluatee implements Evaluatee {
 		public String getTrxName() {
 			return null;
 		}		
+	}
+
+	/**
+	 * Data provider implementation for Java bean
+	 */
+	public static class JavaBeanDataProvider implements DataProvider {
+
+		private final Object bean;
+
+		public JavaBeanDataProvider(Object bean) {
+			this.bean = bean;
+		}
+
+		@Override
+		public Object getValue(String columnName) {
+			return getProperty(columnName);
+		}
+
+		@Override
+		public Object getProperty(String propertyName) {
+			if (bean == null || propertyName == null)
+				return null;
+			
+			char startChar = propertyName.charAt(0);
+			if (startChar != Character.toUpperCase(startChar)) {
+				propertyName = Character.toUpperCase(startChar) + propertyName.substring(1);
+			}
+			String methodName = "get" + propertyName;
+			Expression methodExpression = new Expression(bean, methodName, null);
+			Object value = null;
+			try {
+				value = methodExpression.getValue();
+			} catch (Exception e) {				
+			}
+			return value;
+		}
+
+		@Override
+		public MColumn getColumn(String columnName) {
+			return null;
+		}
+
+		@Override
+		public String getTrxName() {
+			return null;
+		}
 	}
 }

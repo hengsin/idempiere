@@ -32,6 +32,7 @@
 		<module>org.apache.ecs</module>
 		<module>org.compiere.db.oracle.provider</module>
 		<module>org.compiere.db.postgresql.provider</module>
+		<module>org.idempiere.acct</module>
 		<module>org.idempiere.felix.webconsole</module>
 		<module>org.idempiere.hazelcast.service</module>
 		<module>org.idempiere.webservices</module>
@@ -62,6 +63,7 @@
 		<module>org.idempiere.jetty.osgi.boot.fragment</module>
 		<module>org.idempiere.ui.sso.oidc</module>
 		<module>org.idempiere.tablepartition</module>
+		<module>org.idempiere.extension.manager</module>
 		<module>org.idempiere.p2</module>
 		<module>org.idempiere.javadoc</module>
 		<module>org.idempiere.test-feature</module>
