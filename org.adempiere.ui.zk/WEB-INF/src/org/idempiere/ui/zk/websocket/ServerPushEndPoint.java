@@ -261,7 +261,7 @@ public class ServerPushEndPoint {
 												if (responseCookieStore == null) {
 													responseCookieStore = new BasicCookieStore();
 												}
-												BasicClientCookie responsCookie = new BasicClientCookie(pair[0].trim(), pair[1].trim());
+												BasicClientCookie responseCookie = new BasicClientCookie(pair[0].trim(), pair[1].trim());
 												
 												Date expiryDate = null;
 												// process max-age and other attributes
@@ -281,16 +281,16 @@ public class ServerPushEndPoint {
 													} else if (lowerAttr.startsWith("path=")) {
 														String path = attr.substring(5);
 														cookie.setPath(path);
-														responsCookie.setPath(path);
+														responseCookie.setPath(path);
 													}
 												}
 												if (expiryDate != null) {
 													cookie.setExpiryDate(expiryDate);
-													responsCookie.setExpiryDate(expiryDate);
+													responseCookie.setExpiryDate(expiryDate);
 												}
 												
 												cookieStore.addCookie(cookie);
-												responseCookieStore.addCookie(responsCookie);
+												responseCookieStore.addCookie(responseCookie);
 											}
 										}
 										headersMap.merge(name, value, (existing, replacement) -> existing + ", " + replacement);										
