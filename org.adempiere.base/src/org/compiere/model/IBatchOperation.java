@@ -49,4 +49,7 @@ public interface IBatchOperation<T extends PO> {
 	public boolean executeBatch(String trxName);
 
 	public boolean isEmpty();
+
+	public int getCount();
+
 }

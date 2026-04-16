@@ -351,4 +351,10 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 	public boolean isEmpty() {
 		return m_list.isEmpty();
 	}
+
+	@Override
+	public int getCount() {
+		return m_list.size();
+	}
+
 }
