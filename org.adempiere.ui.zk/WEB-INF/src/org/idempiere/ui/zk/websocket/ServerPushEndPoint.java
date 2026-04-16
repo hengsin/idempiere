@@ -27,6 +27,7 @@ package org.idempiere.ui.zk.websocket;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +62,7 @@ import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
 import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
 import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactoryBuilder;
 import org.apache.hc.client5.http.ssl.TrustAllStrategy;
+import org.apache.hc.client5.http.utils.DateUtils;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.config.RegistryBuilder;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
@@ -249,17 +251,45 @@ public class ServerPushEndPoint {
 										String name = header.getName();
 										String value = header.getValue();
 										if ("Set-Cookie".equalsIgnoreCase(name)) {
-											String[] cookies = value.split(";");
-											String[] pair = cookies[0].split("=", 2);
+											String[] cookieElements = value.split(";");
+											String[] pair = cookieElements[0].split("=", 2);
 											if (pair.length == 2) {
 												//localhost for internal request, no domain for browser cookie
 												BasicClientCookie cookie = new BasicClientCookie(pair[0].trim(), pair[1].trim());
 												cookie.setDomain("localhost");
-												cookieStore.addCookie(cookie);
+												
 												if (responseCookieStore == null) {
 													responseCookieStore = new BasicCookieStore();
 												}
 												BasicClientCookie responsCookie = new BasicClientCookie(pair[0].trim(), pair[1].trim());
+												
+												Date expiryDate = null;
+												// process max-age and other attributes
+												for (int i = 1; i < cookieElements.length; i++) {
+													String attr = cookieElements[i].trim();
+													String lowerAttr = attr.toLowerCase();
+													if (lowerAttr.startsWith("max-age=")) {
+														try {
+															long maxAge = Long.parseLong(attr.substring(8));
+															expiryDate = new Date(System.currentTimeMillis() + maxAge * 1000L);
+														} catch (Exception e) {}
+													} else if (lowerAttr.startsWith("expires=") && expiryDate == null) {
+														try {
+															String expiresValue = attr.substring(8);
+															expiryDate = DateUtils.parseDate(expiresValue);
+														} catch (Exception e) {}
+													} else if (lowerAttr.startsWith("path=")) {
+														String path = attr.substring(5);
+														cookie.setPath(path);
+														responsCookie.setPath(path);
+													}
+												}
+												if (expiryDate != null) {
+													cookie.setExpiryDate(expiryDate);
+													responsCookie.setExpiryDate(expiryDate);
+												}
+												
+												cookieStore.addCookie(cookie);
 												responseCookieStore.addCookie(responsCookie);
 											}
 										}
@@ -274,7 +304,14 @@ public class ServerPushEndPoint {
 										session.getBasicRemote().sendText(jsonResponse.toString());
 										//store cookie in http session for piggyback event in WebSocketServerPush
 										if (responseCookieStore != null && httpSession != null) {
-											httpSession.setAttribute(WebSocketServerPush.WEBSOCKET_EVENT_COOKIE_STORE, responseCookieStore);
+											synchronized (httpSession) {
+												Object existing = httpSession.getAttribute(WebSocketServerPush.WEBSOCKET_EVENT_COOKIE_STORE);
+												if (existing instanceof BasicCookieStore existingStore) {
+													responseCookieStore.getCookies().forEach(existingStore::addCookie);
+												} else {
+													httpSession.setAttribute(WebSocketServerPush.WEBSOCKET_EVENT_COOKIE_STORE, responseCookieStore);
+												}
+											}
 										}
 									} catch (IOException e) {
 										CLogger.getCLogger(getClass()).log(Level.WARNING, "Error sending response to client", e);

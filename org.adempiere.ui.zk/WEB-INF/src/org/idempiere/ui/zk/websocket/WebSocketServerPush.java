@@ -347,7 +347,9 @@ public class WebSocketServerPush implements ServerPush {
 						browserCookie.setSecure(true);
 						browserCookie.setHttpOnly(true);
 						if (cookie.getExpiryDate() != null) {
-							browserCookie.setMaxAge((int) (cookie.getExpiryDate().getTime() - System.currentTimeMillis()));
+							long maxAgeSeconds = Math.max(0L,
+									(cookie.getExpiryDate().getTime() - System.currentTimeMillis()) / 1000L);
+							browserCookie.setMaxAge((int) Math.min(Integer.MAX_VALUE, maxAgeSeconds));
 						}
 						servletResponse.addCookie(browserCookie);
 					});
