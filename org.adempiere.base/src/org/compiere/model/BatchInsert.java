@@ -44,15 +44,20 @@ import org.compiere.util.Trx;
 public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 	private static final CLogger s_log = CLogger.getCLogger(BatchInsert.class);
 	private List<T> m_list = new ArrayList<>();
+	private Class<T> type;
 	
 	private record BatchElement<T extends PO>(T po, List<Object> parameters) {}
 
+	public BatchInsert(Class<T> type) {
+		this.type = type;
+	}	
+	
 	/**
 	 * Add PO to batch
 	 * @param po
 	 */
 	public void add(T po) {
-		if (po != null) {
+		if (po != null && type.isInstance(po)) {
 			m_list.add(po);
 		}
 	}
@@ -73,6 +78,14 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 		String localTrxName = trxName;
 		if (localTrxName != null) {
 			trx = Trx.get(localTrxName, false);
+			if (trx == null)
+			{
+				// Using a trx that was previously closed or never opened
+				// Creating and starting the transaction right here, but please note
+				// that this is not a good practice
+				trx = Trx.get(localTrxName, true);
+				s_log.severe("Transaction closed or never opened ("+localTrxName+") => starting now --> " + toString());
+			}
 		} else {
 			localTrxName = Trx.createTrxName("BatchInsert");
 			trx = Trx.get(localTrxName, true);
@@ -84,10 +97,9 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 		Savepoint savepoint = null;
 		boolean allSuccess = true;
 		Connection conn = null;
-		PreparedStatement pstmt = null;
 
 		try {
-			if (m_list.get(0) instanceof MChangeLog) {
+			if (MChangeLog.class.isAssignableFrom(type)) {
 				PO.setCrossTenantSafe();
 			}
 			conn = trx.getConnection(true);
@@ -97,7 +109,7 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 
 			MSession session = null;
 
-			BatchInsert<MChangeLog> changeLogBatch = new BatchInsert<>();
+			BatchInsert<MChangeLog> changeLogBatch = new BatchInsert<>(MChangeLog.class);
 			for (T po : m_list) {
 				po.set_TrxName(localTrxName);
 				if (!po.doVerificationForSave()) {
@@ -152,31 +164,32 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 			if (allSuccess) {
 				for (Map.Entry<String, List<BatchElement<T>>> entry : sqlMap.entrySet()) {
 					String sql = entry.getKey();
-					pstmt = conn.prepareStatement(sql);
-					List<T> processed = new ArrayList<>();			
-					for (BatchElement<T> element : entry.getValue()) {
-						T po = element.po();
-						List<Object> params = element.parameters();
-						if (params != null) {
-							DB.setParameters(pstmt, params);
+					try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+						List<T> processed = new ArrayList<>();			
+						for (BatchElement<T> element : entry.getValue()) {
+							T po = element.po();
+							List<Object> params = element.parameters();
+							if (params != null) {
+								DB.setParameters(pstmt, params);
+							}
+							pstmt.addBatch();
+							pstmt.clearParameters();
+							processed.add(po);
 						}
-						pstmt.addBatch();
-						pstmt.clearParameters();
-						processed.add(po);
-					}
-					int[] results = pstmt.executeBatch();
-					for (int i = 0; i < results.length; i++) {
-						T po = processed.get(i);
-						if (results[i] == Statement.EXECUTE_FAILED) {
-							s_log.warning("Batch execution failed for " + po.toString());
-							allSuccess = false;
+						int[] results = pstmt.executeBatch();
+						for (int i = 0; i < results.length; i++) {
+							T po = processed.get(i);
+							if (results[i] == Statement.EXECUTE_FAILED) {
+								s_log.warning("Batch execution failed for " + po.toString());
+								allSuccess = false;
+								break;
+							}
+						}
+						if (!allSuccess) {
 							break;
 						}
+						allProcessed.addAll(processed);
 					}
-					if (!allSuccess) {
-						break;
-					}
-					allProcessed.addAll(processed);
 				}
 			}
 
@@ -214,15 +227,16 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 			} else if (savepoint != null) {
 				try {
 					trx.rollback(savepoint);
-				} catch (SQLException e1) {}
+				} catch (SQLException e1) {
+					s_log.log(Level.FINE, "Rollback to savepoint failed", e1);
+				}
 				savepoint = null;
 			}
 		} finally {
-			DB.close(pstmt);
 			if (internalTrx) {
 				trx.close();
 			}
-			if (m_list.get(0) instanceof MChangeLog) {
+			if (MChangeLog.class.isAssignableFrom(type)) {
 				PO.clearCrossTenantSafe();
 			}
 		}

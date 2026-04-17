@@ -856,7 +856,7 @@ public class MPeriod extends X_C_Period implements ImmutablePOSupport
 			MDocType[] types = MDocType.getOfClient(getCtx());
 			int count = 0;
 			ArrayList<String> baseTypes = new ArrayList<String>();
-			BatchInsert<MPeriodControl> batchInsertPeriodControls = new BatchInsert<>();
+			BatchInsert<MPeriodControl> batchInsertPeriodControls = new BatchInsert<>(MPeriodControl.class);
 			for (int i = 0; i < types.length; i++)
 			{
 				MDocType type = types[i];

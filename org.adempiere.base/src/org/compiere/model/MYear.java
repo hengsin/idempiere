@@ -248,7 +248,7 @@ public class MYear extends X_C_Year
 
 		//
 		IProcessUI processMonitor = Env.getProcessUI(getCtx());
-		BatchInsert<PO> batchInsertPeriod = new BatchInsert<>();
+		BatchInsert<MPeriod> batchInsertPeriod = new BatchInsert<>(MPeriod.class);
 		for (int month = 0; month < 12; month++)
 		{
 			

@@ -3134,7 +3134,7 @@ public abstract class PO
 	 * @return true if success
 	 */
 	private boolean doUpdate(boolean withValues) {
-		BatchInsert<MChangeLog> changeLogBatch = new BatchInsert<>();
+		BatchInsert<MChangeLog> changeLogBatch = new BatchInsert<>(MChangeLog.class);
 		StringBuilder whereClauseHolder = new StringBuilder();
 		SQLFragment sqlFragment = buildUpdateSQL(withValues, whereClauseHolder, changeLogBatch);
 		if (sqlFragment != null && !Util.isEmpty(sqlFragment.sqlClause())) {
@@ -3756,7 +3756,7 @@ public abstract class PO
 		//params for insert statement
 		List<Object> params = new ArrayList<Object>();
 				
-		BatchInsert<MChangeLog> changeLogBatch = new BatchInsert<>();
+		BatchInsert<MChangeLog> changeLogBatch = new BatchInsert<>(MChangeLog.class);
 		//	SQL
 		StringBuilder sqlInsert = new StringBuilder();
 		AD_ChangeLog_ID = buildInsertSQL(sqlInsert, withValues, params, session, AD_ChangeLog_ID, false, null, changeLogBatch);
@@ -4593,7 +4593,7 @@ public abstract class PO
 						{
 							int	AD_ChangeLog_ID = 0;
 							int size = get_ColumnCount();
-							BatchInsert<MChangeLog> changeLogBatch = new BatchInsert<>();
+							BatchInsert<MChangeLog> changeLogBatch = new BatchInsert<>(MChangeLog.class);
 							for (int i = 0; i < size; i++)
 							{
 								Object value = m_oldValues[i];
@@ -4622,13 +4622,10 @@ public abstract class PO
 							}
 						}
 	
-						//	Housekeeping
-						m_IDs[0] = I_ZERO;
 						if (m_trxName == null)
 							log.fine("complete");
 						else
 							if (log.isLoggable(Level.FINE)) log.fine("[" + m_trxName + "] - complete");
-						m_attachment = null;
 					}
 				}
 				else
@@ -4778,6 +4775,9 @@ public abstract class PO
 				@Override
 				public void afterCommit(Trx trxdel, boolean success) {
 					if (success) {
+						m_idOld = get_ID();
+						m_IDs[0] = PO.I_ZERO;
+						m_attachment = null;						
 						if (m_KeyColumns != null && m_KeyColumns.length == 1 && !getTable().isUUIDKeyTable())
 							// Delete Cascade AD_Table_ID/Record_ID on Attachments/Archive
 							// after commit because operations on external storage providers don't have rollback

@@ -45,15 +45,20 @@ import org.idempiere.db.util.SQLFragment;
 public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 	private static final CLogger s_log = CLogger.getCLogger(BatchUpdate.class);
 	private List<T> m_list = new ArrayList<>();
+	private Class<T> type;
 
 	private record BatchElement<T extends PO>(T po, List<Object> parameters) {}
 
+	public BatchUpdate(Class<T> type) {
+		this.type = type;
+	}
+	
 	/**
 	 * Add PO to batch
 	 * @param po
 	 */
 	public void add(T po) {
-		if (po != null) {
+		if (po != null && type.isInstance(po)) {
 			m_list.add(po);
 		}
 	}
@@ -74,6 +79,14 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 		String localTrxName = trxName;
 		if (localTrxName != null) {
 			trx = Trx.get(localTrxName, false);
+			if (trx == null)
+			{
+				// Using a trx that was previously closed or never opened
+				// Creating and starting the transaction right here, but please note
+				// that this is not a good practice
+				trx = Trx.get(localTrxName, true);
+				s_log.severe("Transaction closed or never opened ("+localTrxName+") => starting now --> " + toString());
+			}
 		} else {
 			localTrxName = Trx.createTrxName("BatchUpdate");
 			trx = Trx.get(localTrxName, true);
@@ -81,12 +94,11 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 		}
 
 		Map<String, List<BatchElement<T>>> sqlMap = new LinkedHashMap<>();
-		BatchInsert<MChangeLog> changeLogBatch = new BatchInsert<>();
+		BatchInsert<MChangeLog> changeLogBatch = new BatchInsert<>(MChangeLog.class);
 
 		Savepoint savepoint = null;
 		boolean allSuccess = true;
 		Connection conn = null;
-		PreparedStatement pstmt = null;
 
 		try {
 			conn = trx.getConnection(true);
@@ -132,8 +144,15 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 				if (sqlFragment.sqlClause() == null || sqlFragment.sqlClause().length() == 0) {
 					// no changes, pretend success
 					po.m_idOld = po.get_ID();
-					po.afterSave(false, true);
-					ModelValidationEngine.get().fireModelChange(po, ModelValidator.TYPE_AFTER_CHANGE);
+					if (po.afterSave(false, true)) {
+						errorMsg = ModelValidationEngine.get().fireModelChange(po, ModelValidator.TYPE_AFTER_CHANGE);
+						if (errorMsg != null) {
+							s_log.warning("Validation failed - " + errorMsg);
+							allSuccess = false;
+						}
+					} else {
+						allSuccess = false;
+					}
 					continue;
 				}
 
@@ -152,31 +171,32 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 			if (allSuccess) {
 				for (Map.Entry<String, List<BatchElement<T>>> entry : sqlMap.entrySet()) {
 					sql = entry.getKey();
-					pstmt = conn.prepareStatement(sql);
-					List<T> processed = new ArrayList<>();			
-					for (BatchElement<T> element : entry.getValue()) {
-						T po = element.po();
-						List<Object> params = element.parameters();
-						if (params != null && !params.isEmpty()) {
-							DB.setParameters(pstmt, params);
+					try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+						List<T> processed = new ArrayList<>();			
+						for (BatchElement<T> element : entry.getValue()) {
+							T po = element.po();
+							List<Object> params = element.parameters();
+							if (params != null && !params.isEmpty()) {
+								DB.setParameters(pstmt, params);
+							}
+							pstmt.addBatch();
+							pstmt.clearParameters();
+							processed.add(po);
 						}
-						pstmt.addBatch();
-						pstmt.clearParameters();
-						processed.add(po);
-					}
-					int[] results = pstmt.executeBatch();
-					for (int i = 0; i < results.length; i++) {
-						T po = processed.get(i);
-						if (results[i] == Statement.EXECUTE_FAILED) {
-							s_log.warning("Batch execution failed for " + po.toString());
-							allSuccess = false;
+						int[] results = pstmt.executeBatch();
+						for (int i = 0; i < results.length; i++) {
+							T po = processed.get(i);
+							if (results[i] != 1) {
+								s_log.warning("Batch execution failed for " + po.toString());
+								allSuccess = false;
+								break;
+							}
+						}
+						if (!allSuccess) {
 							break;
 						}
+						allProcessed.addAll(processed);
 					}
-					if (!allSuccess) {
-						break;
-					}
-					allProcessed.addAll(processed);
 				}
 			}
 			
@@ -213,7 +233,6 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 				savepoint = null;
 			}
 		} finally {
-			DB.close(pstmt);
 			if (internalTrx) {
 				trx.close();
 			}
