@@ -32,10 +32,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.exceptions.DBException;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.Env;
+import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.TrxEventListener;
+import org.compiere.util.ValueNamePair;
 import org.idempiere.db.util.SQLFragment;
 
 /**
@@ -54,25 +59,17 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 		this.type = type;
 	}
 
-	/**
-	 * Add PO to batch
-	 * @param po
-	 */
+	@Override
 	public void add(T po) {
 		if (po != null && type.isInstance(po)) {
 			m_list.add(po);
 		}
 	}
 
-
-	/**
-	 * Execute batch delete
-	 * @param trxName transaction name
-	 * @return true if success
-	 */
-	public boolean executeBatch(String trxName) {
+	@Override
+	public void executeBatch(String trxName) {
 		if (m_list.isEmpty()) {
-			return true;
+			return;
 		}
 
 		Trx trx = null;
@@ -98,6 +95,7 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 		boolean allSuccess = true;
 		Connection conn = null;
 
+		// follow BatchInsert logic for save error and throwing of exception
 		try {
 			conn = trx.getConnection(true);
 			if (!internalTrx) {
@@ -134,6 +132,8 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 
 				if (!po.beforeDelete()) {
 					s_log.warning("beforeDelete failed - " + po.toString());
+					if (CLogger.peekError() == null)
+						s_log.saveError("Error", "beforeDelete failed - " + po.toString());
 					allSuccess = false;
 					break;
 				}
@@ -142,6 +142,7 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 				po.setReplication(false);
 				if (errorMsg != null) {
 					s_log.warning("Validation failed - " + errorMsg);
+					s_log.saveError(errorMsg, "");
 					allSuccess = false;
 					break;
 				}
@@ -185,7 +186,7 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 
 			if (!allSuccess) {
 				rollback(trx, internalTrx, savepoint);
-				return false;
+				throwSaveError();
 			}
 
 			// 2. Process delete of dependent records
@@ -193,7 +194,7 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 				BatchDelete<PO> batchDelete = new BatchDelete<>(PO.class);
 				for (PO po : preDeletes)
 					batchDelete.add(po);
-				allSuccess = batchDelete.executeBatch(localTrxName);
+				batchDelete.executeBatch(localTrxName);
 			}
 
 			// 3. Process updates (mostly from setRecordNull)
@@ -202,12 +203,7 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 				for(PO po : updates) {
 					batchUpdate.add(po);
 				}
-				allSuccess = batchUpdate.executeBatch(localTrxName);
-			}
-			
-			if (!allSuccess) {
-				rollback(trx, internalTrx, savepoint);
-				return false;
+				batchUpdate.executeBatch(localTrxName);
 			}
 
 			// 4. Execute pre delete statements (delete translations, trees, etc)
@@ -221,6 +217,8 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 				for (int i = 0; i < results.length; i++) {
 					if (results[i] == Statement.EXECUTE_FAILED) {
 						s_log.warning("Batch execution failed for " + preDeleteStatements.get(i));
+						if (CLogger.peekError() == null)
+							s_log.saveError("Error", "Batch execution failed - " + preDeleteStatements.get(i));
 						allSuccess = false;
 					}
 				}
@@ -228,14 +226,14 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 				s_log.log(Level.SEVERE, "Failed to execute pre delete statements", e);
 				allSuccess = false;
 				rollback(trx, internalTrx, savepoint);
-				return false;
+				throw new DBException(e);
 			} finally {
 				DB.close(stmt);
 			}
 
 			if (!allSuccess) {
 				rollback(trx, internalTrx, savepoint);
-				return false;
+				throwSaveError();
 			}
 
 			// 5. Execute delete
@@ -256,6 +254,8 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 						T po = entry.getValue().get(i).po();
 						if (results[i] <= 0) {
 							s_log.warning("Batch execution failed for " + po.toString());
+							if (CLogger.peekError() == null)
+								s_log.saveError("Error", "Batch execution failed - " + po.toString());
 							allSuccess = false;
 							po.afterDelete(false);
 							break;
@@ -270,13 +270,13 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 
 			if (allSuccess) {
 				for(T po : deletes) {
-					allSuccess = po.afterDelete(true);
-					if (allSuccess) {
-						ModelValidationEngine.get().fireModelChange(po, ModelValidator.TYPE_AFTER_DELETE);						
-					}
-					if (!allSuccess) {
+					if (!po.afterDelete(true)) {
+						if (CLogger.peekError() == null)
+							s_log.saveError("Error", "afterDelete failed - " + po.toString());
+						allSuccess = false;
 						break;
 					}
+					ModelValidationEngine.get().fireModelChange(po, ModelValidator.TYPE_AFTER_DELETE);
 				}
 			}
 
@@ -316,29 +316,20 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 				}
 			} else {
 				rollback(trx, internalTrx, savepoint);
+				throwSaveError();
 			}
-
 		} catch (Exception e) {
 			s_log.log(Level.SEVERE, "executeBatch", e);
-			allSuccess = false;
 			rollback(trx, internalTrx, savepoint);
+			if (e instanceof RuntimeException runtimeException)
+				throw runtimeException;
+			else if (e instanceof SQLException sqlException)
+				throw new DBException(sqlException);
+			else
+				throw new AdempiereException(e);
 		} finally {
 			if (internalTrx) {
 				trx.close();
-			}
-		}
-
-		return allSuccess;
-	}
-
-	private void rollback(Trx trx, boolean internalTrx, Savepoint savepoint) {
-		if (internalTrx) {
-			trx.rollback();
-		} else if (savepoint != null) {
-			try {
-				trx.rollback(savepoint);
-			} catch (SQLException e) {
-				s_log.log(Level.FINE, "Rollback to savepoint failed", e);
 			}
 		}
 	}
@@ -353,4 +344,38 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 		return m_list.size();
 	}
 
+	/**
+	 * Throw AdempiereException based on CLogger error
+	 */
+	private void throwSaveError() {
+		StringBuilder msg = new StringBuilder();
+		ValueNamePair err = CLogger.retrieveError();
+		String val = err != null ? Msg.translate(Env.getCtx(), err.getValue()) : "";
+		if (err != null) {
+			if (val != null) {
+				msg.append(val);
+				if (val.endsWith(":"))
+					msg.append(" ");
+				else if (! val.endsWith(": "))
+					msg.append(": ");
+			}
+			msg.append(err.getName());
+		}
+		if (msg.length() == 0)
+			msg.append("SaveError");
+		Exception ex = CLogger.retrieveException();
+		throw new AdempiereException(msg.toString(), ex);
+	}
+
+	private void rollback(Trx trx, boolean internalTrx, Savepoint savepoint) {
+		if (internalTrx) {
+			trx.rollback();
+		} else if (savepoint != null) {
+			try {
+				trx.rollback(savepoint);
+			} catch (SQLException e) {
+				s_log.log(Level.FINE, "Rollback to savepoint failed", e);
+			}
+		}
+	}
 }

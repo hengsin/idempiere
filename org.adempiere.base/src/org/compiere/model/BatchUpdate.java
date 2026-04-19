@@ -25,16 +25,20 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Savepoint;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.exceptions.DBException;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.Env;
+import org.compiere.util.Msg;
 import org.compiere.util.Trx;
+import org.compiere.util.ValueNamePair;
 import org.idempiere.db.util.SQLFragment;
 
 /**
@@ -53,25 +57,17 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 		this.type = type;
 	}
 	
-	/**
-	 * Add PO to batch
-	 * @param po
-	 */
+	@Override
 	public void add(T po) {
 		if (po != null && type.isInstance(po)) {
 			m_list.add(po);
 		}
 	}
 
-
-	/**
-	 * Execute batch update
-	 * @param trxName transaction name
-	 * @return true if success
-	 */
-	public boolean executeBatch(String trxName) {
+	@Override
+	public void executeBatch(String trxName) {
 		if (m_list.isEmpty()) {
-			return true;
+			return;
 		}
 
 		Trx trx = null;
@@ -119,6 +115,8 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 				}
 				if (!po.beforeSave(false)) {
 					s_log.warning("beforeSave failed - " + po.toString());
+					if (CLogger.peekError() == null)
+						s_log.saveError("Error","beforeSave failed - " + po.toString());
 					allSuccess = false;
 					break;
 				}
@@ -126,11 +124,14 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 				String errorMsg = ModelValidationEngine.get().fireModelChange(po, ModelValidator.TYPE_CHANGE);
 				if (errorMsg != null) {
 					s_log.warning("Validation failed - " + errorMsg);
+					s_log.saveError(errorMsg, "");
 					allSuccess = false;
 					break;
 				}
 
 				if (!po.doOrganizationCheckForSave()) {
+					if (CLogger.peekError() == null)
+						s_log.saveError("Error", "Organization check failed - " + po.toString());
 					allSuccess = false;
 					break;
 				}
@@ -138,6 +139,8 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 				// build update sql
 				SQLFragment sqlFragment = po.buildUpdateSQL(false, null, changeLogBatch);
 				if (sqlFragment == null) {
+					if (CLogger.peekError() == null)
+						s_log.saveError("Error", "Failed to build update SQL - " + po.toString());
 					allSuccess = false;
 					break;
 				}
@@ -148,9 +151,12 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 						errorMsg = ModelValidationEngine.get().fireModelChange(po, ModelValidator.TYPE_AFTER_CHANGE);
 						if (errorMsg != null) {
 							s_log.warning("Validation failed - " + errorMsg);
+							s_log.saveError(errorMsg, "");
 							allSuccess = false;
 						}
 					} else {
+						if (CLogger.peekError() == null)
+							s_log.saveError("Error", "afterSave failed - " + po.toString());
 						allSuccess = false;
 					}
 					continue;
@@ -161,10 +167,8 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 			}
 
 			// insert change logs
-			if (!changeLogBatch.isEmpty()) {				
-				if (!changeLogBatch.executeBatch(localTrxName)) {
-					allSuccess = false;
-				}
+			if (allSuccess && !changeLogBatch.isEmpty()) {				
+				changeLogBatch.executeBatch(localTrxName);
 			}
 
 			List <T> allProcessed = new ArrayList<>();
@@ -188,6 +192,8 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 							T po = processed.get(i);
 							if (results[i] != 1) {
 								s_log.warning("Batch execution failed for " + po.toString());
+								if (CLogger.peekError() == null)
+									s_log.saveError("Error", "Batch execution failed - " + po.toString());
 								allSuccess = false;
 								break;
 							}
@@ -212,33 +218,23 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 					savepoint = null;
 				}
 			} else {
-				if (internalTrx) {
-					trx.rollback();
-				} else if (savepoint != null) {
-					trx.rollback(savepoint);
-					savepoint = null;
-				}
+				rollback(trx, internalTrx, savepoint);
+				throwSaveError();
 			}
 		} catch (Exception e) {
 			s_log.log(Level.SEVERE, "executeBatch", e);
-			allSuccess = false;
-			if (internalTrx) {
-				trx.rollback();
-			} else if (savepoint != null) {
-				try {
-					trx.rollback(savepoint);
-				} catch (SQLException e1) {
-					s_log.log(Level.FINE, "Rollback to savepoint failed", e1);
-				}
-				savepoint = null;
-			}
+			rollback(trx, internalTrx, savepoint);
+			if (e instanceof RuntimeException runtimeException)
+				throw runtimeException;
+			else if (e instanceof SQLException sqlException)
+				throw new DBException(sqlException);
+			else
+				throw new AdempiereException(e);
 		} finally {
 			if (internalTrx) {
 				trx.close();
 			}
 		}
-
-		return allSuccess;
 	}
 
 	@Override
@@ -251,4 +247,38 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 		return m_list.size();
 	}
 
+	/**
+	 * Throw AdempiereException based on CLogger error
+	 */
+	private void throwSaveError() {
+		StringBuilder msg = new StringBuilder();
+		ValueNamePair err = CLogger.retrieveError();
+		String val = err != null ? Msg.translate(Env.getCtx(), err.getValue()) : "";
+		if (err != null) {
+			if (val != null) {
+				msg.append(val);
+				if (val.endsWith(":"))
+					msg.append(" ");
+				else if (! val.endsWith(": "))
+					msg.append(": ");
+			}
+			msg.append(err.getName());
+		}
+		if (msg.length() == 0)
+			msg.append("SaveError");
+		Exception ex = CLogger.retrieveException();
+		throw new AdempiereException(msg.toString(), ex);
+	}
+
+	private void rollback(Trx trx, boolean internalTrx, Savepoint savepoint) {
+		if (internalTrx) {
+			trx.rollback();
+		} else if (savepoint != null) {
+			try {
+				trx.rollback(savepoint);
+			} catch (SQLException e) {
+				s_log.log(Level.FINE, "Rollback to savepoint failed", e);
+			}
+		}
+	}
 }

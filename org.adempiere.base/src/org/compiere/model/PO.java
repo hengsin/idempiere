@@ -3139,8 +3139,7 @@ public abstract class PO
 		SQLFragment sqlFragment = buildUpdateSQL(withValues, whereClauseHolder, changeLogBatch);
 		if (sqlFragment != null && !Util.isEmpty(sqlFragment.sqlClause())) {
 			if (!changeLogBatch.isEmpty()) {
-				if (!changeLogBatch.executeBatch(m_trxName))
-					return false;
+				changeLogBatch.executeBatch(m_trxName);
 			}
 			var sql = sqlFragment.sqlClause();
 			var params = sqlFragment.parameters();			
@@ -3761,8 +3760,7 @@ public abstract class PO
 		StringBuilder sqlInsert = new StringBuilder();
 		AD_ChangeLog_ID = buildInsertSQL(sqlInsert, withValues, params, session, AD_ChangeLog_ID, false, null, changeLogBatch);
 		if (!changeLogBatch.isEmpty()) {
-			if (!changeLogBatch.executeBatch(m_trxName))
-				return false;
+			changeLogBatch.executeBatch(m_trxName);
 		}
 		//
 		int no = withValues ? DB.executeUpdate(sqlInsert.toString(), m_trxName) 
@@ -4618,7 +4616,7 @@ public abstract class PO
 							}	//   for all fields
 							
 							if (!changeLogBatch.isEmpty()) {
-								success = changeLogBatch.executeBatch(m_trxName != null ? m_trxName : localTrxName);
+								changeLogBatch.executeBatch(m_trxName != null ? m_trxName : localTrxName);
 							}
 						}
 	

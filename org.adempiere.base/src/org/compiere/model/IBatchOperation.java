@@ -31,25 +31,34 @@ public interface IBatchOperation<T extends PO> {
 	 * Add PO to batch
 	 * @param po
 	 */
-	public void add(T po);
+	void add(T po);
 
 	/**
-	 * Execute batch operation
-	 * @return true if success
+	 * Execute batch operation.<br/>
+	 * Throw RuntimeException if failed
 	 */
-	public default boolean executeBatch() {
-		return executeBatch(null);
+	default void executeBatch() {
+		executeBatch(null);
 	}
 
 	/**
-	 * Execute batch operation
+	 * Execute batch operation.<br/>
+	 * Throw RuntimeException if failed
+	 * 
 	 * @param trxName transaction name
-	 * @return true if success
 	 */
-	public boolean executeBatch(String trxName);
+	void executeBatch(String trxName);
 
-	public boolean isEmpty();
+	/**
+	 * Get is batch empty
+	 * @return true if batch is empty
+	 */
+	boolean isEmpty();
 
-	public int getCount();
+	/**
+	 * Get count of PO in batch
+	 * @return count of PO in batch
+	 */
+	int getCount();
 
 }
