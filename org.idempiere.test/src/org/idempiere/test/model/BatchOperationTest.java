@@ -32,7 +32,6 @@ import org.compiere.model.BatchUpdate;
 import org.compiere.model.I_AD_UserPreference;
 import org.compiere.model.MChangeLog;
 import org.compiere.model.MNote;
-import org.compiere.model.MProduct;
 import org.compiere.model.MSession;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;

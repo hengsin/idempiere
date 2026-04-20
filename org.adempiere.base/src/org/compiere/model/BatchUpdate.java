@@ -43,7 +43,8 @@ import org.compiere.util.ValueNamePair;
 import org.idempiere.db.util.SQLFragment;
 
 /**
- * Batch Update PO
+ * Batch Update PO.<br/>
+ * Difference from individual PO update - no auto reload of PO after successful save.
  * @param <T> PO type
  * @author iDempiere
  */
@@ -197,6 +198,8 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 									s_log.saveError("Error", "Batch execution failed - " + po.toString());
 								allSuccess = false;
 								break;
+							} else {
+								allSuccess = po.lobSave();
 							}
 						}
 						if (!allSuccess) {
@@ -208,7 +211,9 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 			}
 			
 			for(T po : allProcessed) {
-				po.saveFinish(false, allSuccess);
+				boolean ret = po.saveFinish(false, allSuccess);
+				if (!ret && allSuccess)
+					allSuccess = false;
 			}
 
 			if (allSuccess) {

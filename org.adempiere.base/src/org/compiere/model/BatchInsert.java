@@ -42,7 +42,8 @@ import org.compiere.util.Trx;
 import org.compiere.util.ValueNamePair;
 
 /**
- * Batch Insert PO
+ * Batch Insert PO.<br/>
+ * Difference from invididual PO insert: no auto reload of PO after successsful save.
  * @param <T> PO type
  * @author iDempiere
  */
@@ -190,8 +191,10 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 									s_log.saveError("Error", "Batch execution failed - " + po.toString());
 								allSuccess = false;
 								break;
-							} else if (po.isLogSQLScript()) {
-								po.afterInsertWithValues(session);
+							} else {
+								if (po.isLogSQLScript())
+									po.afterInsertWithValues(session);
+								allSuccess = po.lobSave();
 							}
 						}
 						if (!allSuccess) {
@@ -208,7 +211,9 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 			}
 
 			for(T po : allProcessed) {
-				po.saveFinish(true, allSuccess);
+				boolean ret = po.saveFinish(true, allSuccess);
+				if (!ret && allSuccess)
+					allSuccess = false;
 			}
 
 			if (allSuccess) {
