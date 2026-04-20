@@ -4812,7 +4812,6 @@ public abstract class PO
 	 * Internal use, application should not call this method directly.
 	 */
 	protected void resetStateAfterDelete() {
-		m_idOld = 0;
 		int size = p_info.getColumnCount();
 		m_oldValues = new Object[size];
 		m_newValues = new Object[size];
@@ -6296,6 +6295,14 @@ public abstract class PO
 	 */
 	public static void clearCrossTenantSafe() {
 		isSafeCrossTenant.set(Boolean.FALSE);
+	}
+
+	/**
+	 * Is cross tenant safe thread local flag is turned on
+	 * @return true if cross tenant safe thread local flag is turned on, false otherwise
+	 */
+	public static boolean isCrossTenantSafe() {
+		return isSafeCrossTenant.get();
 	}
 
 	/**

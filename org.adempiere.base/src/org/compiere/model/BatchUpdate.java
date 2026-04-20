@@ -210,10 +210,12 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 				}
 			}
 			
-			for(T po : allProcessed) {
-				boolean ret = po.saveFinish(false, allSuccess);
-				if (!ret && allSuccess)
-					allSuccess = false;
+			if (allSuccess) {
+				for(T po : allProcessed) {
+					allSuccess = po.saveFinish(false, allSuccess);
+					if (!allSuccess)
+						break;
+				}
 			}
 
 			if (allSuccess) {

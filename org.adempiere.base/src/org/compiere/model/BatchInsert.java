@@ -96,9 +96,13 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 		boolean allSuccess = true;
 		Connection conn = null;
 
+		boolean crossTenantSafeSet = false;
 		try {
 			if (MChangeLog.class.isAssignableFrom(type)) {
-				PO.setCrossTenantSafe();
+				if (!PO.isCrossTenantSafe()) {
+					PO.setCrossTenantSafe();
+					crossTenantSafeSet = true;
+				}
 			}
 			conn = trx.getConnection(true);
 			if (!internalTrx) {
@@ -195,6 +199,8 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 								if (po.isLogSQLScript())
 									po.afterInsertWithValues(session);
 								allSuccess = po.lobSave();
+								if (!allSuccess)
+									break;
 							}
 						}
 						if (!allSuccess) {
@@ -210,10 +216,12 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 				changeLogBatch.executeBatch(localTrxName);
 			}
 
-			for(T po : allProcessed) {
-				boolean ret = po.saveFinish(true, allSuccess);
-				if (!ret && allSuccess)
-					allSuccess = false;
+			if (allSuccess) {
+				for(T po : allProcessed) {
+					allSuccess = po.saveFinish(true, allSuccess);
+					if (!allSuccess)
+						break;
+				}
 			}
 
 			if (allSuccess) {
@@ -244,7 +252,8 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 				trx.close();
 			}
 			if (MChangeLog.class.isAssignableFrom(type)) {
-				PO.clearCrossTenantSafe();
+				if (crossTenantSafeSet) 
+					PO.clearCrossTenantSafe();
 			}
 		}
 	}
