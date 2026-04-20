@@ -159,7 +159,7 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 
 				StringBuilder sqlb = new StringBuilder();
 				List<Object> params = new ArrayList<>();
-				po.buildInsertSQL(sqlb, false, params, session, 0, false, null, changeLogBatch);
+				po.buildInsertSQL(sqlb, po.isLogSQLScript(), params, session, 0, false, null, changeLogBatch);
 
 				sqlMap.computeIfAbsent(sqlb.toString(), k -> new ArrayList<>()).add(new BatchElement<>(po, params));
 			}
@@ -190,6 +190,8 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 									s_log.saveError("Error", "Batch execution failed - " + po.toString());
 								allSuccess = false;
 								break;
+							} else if (po.isLogSQLScript()) {
+								po.afterInsertWithValues(session);
 							}
 						}
 						if (!allSuccess) {

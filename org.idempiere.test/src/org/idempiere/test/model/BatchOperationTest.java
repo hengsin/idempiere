@@ -29,8 +29,10 @@ import java.util.List;
 import org.compiere.model.BatchDelete;
 import org.compiere.model.BatchInsert;
 import org.compiere.model.BatchUpdate;
+import org.compiere.model.I_AD_UserPreference;
 import org.compiere.model.MChangeLog;
 import org.compiere.model.MNote;
+import org.compiere.model.MProduct;
 import org.compiere.model.MSession;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
@@ -38,6 +40,7 @@ import org.compiere.model.MUser;
 import org.compiere.model.Query;
 import org.compiere.util.CacheMgt;
 import org.compiere.util.Env;
+import org.compiere.util.Ini;
 import org.idempiere.test.AbstractTestCase;
 import org.idempiere.test.DictionaryIDs;
 import org.junit.jupiter.api.Test;
@@ -83,9 +86,17 @@ public class BatchOperationTest extends AbstractTestCase {
 					.setParameters(getAD_Client_ID())
 					.list();
 			assertEquals(10, notes.size(), "Should have inserted 10 notes");
+			StringBuilder builder = new StringBuilder("Record_ID IN (");
+			for (int i = 0; i < notes.size(); i++) {
+				builder.append("'");
+				builder.append(notes.get(i).get_ID());
+				builder.append("', ");
+			}
+			builder.delete(builder.length() - 2, builder.length());
+			builder.append(")");
 			
 			// Verify change logs for insert
-			long logCount = new Query(Env.getCtx(), MChangeLog.Table_Name, "AD_Table_ID=? AND EventChangeLog='I' AND AD_Client_ID=?", getTrxName())
+			long logCount = new Query(Env.getCtx(), MChangeLog.Table_Name, "AD_Table_ID=? AND EventChangeLog='I' AND AD_Client_ID=? AND "+builder.toString(), getTrxName())
 					.setParameters(MNote.Table_ID, getAD_Client_ID())
 					.count();
 			assertTrue(logCount >= 10, "Should have change logs for insert");
@@ -104,7 +115,7 @@ public class BatchOperationTest extends AbstractTestCase {
 			assertEquals(10, notes.size(), "Should have updated 10 notes");
 			
 			// Verify change logs for update
-			logCount = new Query(Env.getCtx(), MChangeLog.Table_Name, "AD_Table_ID=? AND EventChangeLog='U' AND AD_Client_ID=?", getTrxName())
+			logCount = new Query(Env.getCtx(), MChangeLog.Table_Name, "AD_Table_ID=? AND EventChangeLog='U' AND AD_Client_ID=? AND "+builder.toString(), getTrxName())
 					.setParameters(MNote.Table_ID, getAD_Client_ID())
 					.count();
 			assertTrue(logCount >= 10, "Should have change logs for update");
@@ -122,11 +133,79 @@ public class BatchOperationTest extends AbstractTestCase {
 			assertEquals(0, notes.size(), "Should have deleted 10 notes");
 			
 			// Verify change logs for delete
-			logCount = new Query(Env.getCtx(), MChangeLog.Table_Name, "AD_Table_ID=? AND EventChangeLog='D' AND AD_Client_ID=?", getTrxName())
+			logCount = new Query(Env.getCtx(), MChangeLog.Table_Name, "AD_Table_ID=? AND EventChangeLog='D' AND AD_Client_ID=? AND "+builder.toString(), getTrxName())
 					.setParameters(MNote.Table_ID, getAD_Client_ID())
 					.count();
 			assertTrue(logCount >= 10, "Should have change logs for delete");
 			
+			// Verify change log with log migration script
+			Env.getCtx().setProperty(Ini.P_LOGMIGRATIONSCRIPT, "Y");
+			Env.setContext(Env.getCtx(), I_AD_UserPreference.COLUMNNAME_MigrationScriptComment, "testLogMigrationScript");
+			assertTrue(Env.isLogMigrationScript(MNote.Table_Name), "Unexpected Log Migration Script Y/N value for MNote");
+			insertBatch = new BatchInsert<>(MNote.class);
+			for (int i = 0; i < 10; i++) {
+				MNote note = new MNote(Env.getCtx(), 0, getTrxName());
+				note.setAD_Table_ID(MUser.Table_ID);
+				note.setRecord_ID(DictionaryIDs.AD_User.GARDEN_USER.id);
+				note.setTextMsg("org.idempiere.test.model.BatchOperationTest P_LOGMIGRATIONSCRIPT: " + i);
+				note.setAD_Message_ID(125);
+				insertBatch.add(note);
+			}
+			insertBatch.executeBatch(getTrxName());
+			
+			notes = new Query(Env.getCtx(), MNote.Table_Name, "TextMsg LIKE 'org.idempiere.test.model.BatchOperationTest P_LOGMIGRATIONSCRIPT:%' AND AD_Client_ID=?", getTrxName())
+					.setParameters(getAD_Client_ID())
+					.list();
+			assertEquals(10, notes.size(), "Should have inserted 10 notes");
+			builder = new StringBuilder("Record_ID IN (");
+			for (int i = 0; i < notes.size(); i++) {
+				builder.append("'");
+				builder.append(notes.get(i).get_ID());
+				builder.append("', ");
+			}
+			builder.delete(builder.length() - 2, builder.length());
+			builder.append(")");
+
+			logCount = new Query(Env.getCtx(), MChangeLog.Table_Name, "AD_Table_ID=? AND EventChangeLog='I' AND AD_Client_ID=? AND "+builder.toString(), getTrxName())
+					.setParameters(MNote.Table_ID, getAD_Client_ID())
+					.count();
+			assertTrue(logCount >= 10, "Should have change logs for insert");
+			
+			// 2. Batch Update
+			updateBatch = new BatchUpdate<>(MNote.class);
+			for (MNote note : notes) {
+				note.setTextMsg(note.getTextMsg() + " Updated");
+				updateBatch.add(note);
+			}
+			updateBatch.executeBatch(getTrxName());
+			
+			notes = new Query(Env.getCtx(), MNote.Table_Name, "TextMsg LIKE 'org.idempiere.test.model.BatchOperationTest P_LOGMIGRATIONSCRIPT: % Updated' AND AD_Client_ID=?", getTrxName())
+					.setParameters(getAD_Client_ID())
+					.list();
+			assertEquals(10, notes.size(), "Should have updated 10 notes");
+			
+			// Verify change logs for update
+			logCount = new Query(Env.getCtx(), MChangeLog.Table_Name, "AD_Table_ID=? AND EventChangeLog='U' AND AD_Client_ID=? AND "+builder.toString(), getTrxName())
+					.setParameters(MNote.Table_ID, getAD_Client_ID())
+					.count();
+			assertTrue(logCount >= 10, "Should have change logs for update");
+
+			// 3. Batch Delete
+			deleteBatch = new BatchDelete<>(MNote.class);
+			for (MNote note : notes) {
+				deleteBatch.add(note);
+			}
+			deleteBatch.executeBatch(getTrxName());
+			
+			notes = new Query(Env.getCtx(), MNote.Table_Name, "TextMsg LIKE 'org.idempiere.test.model.BatchOperationTest P_LOGMIGRATIONSCRIPT:% Updated' AND AD_Client_ID=?", getTrxName())
+					.setParameters(getAD_Client_ID())
+					.list();
+			assertEquals(0, notes.size(), "Should have deleted 10 notes");	
+			// Verify change logs for delete
+			logCount = new Query(Env.getCtx(), MChangeLog.Table_Name, "AD_Table_ID=? AND EventChangeLog='D' AND AD_Client_ID=? AND "+builder.toString(), getTrxName())
+					.setParameters(MNote.Table_ID, getAD_Client_ID())
+					.count();
+			assertTrue(logCount >= 10, "Should have change logs for delete");		
 		} finally {
 			rollback();
 			if (!isChangeLog) {

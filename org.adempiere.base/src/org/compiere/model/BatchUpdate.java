@@ -138,7 +138,7 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 				}
 
 				// build update sql
-				SQLFragment sqlFragment = po.buildUpdateSQL(false, null, changeLogBatch);
+				SQLFragment sqlFragment = po.buildUpdateSQL(po.isLogSQLScript(), null, changeLogBatch);
 				if (sqlFragment == null) {
 					if (CLogger.peekError() == null)
 						s_log.saveError("Error", "Failed to build update SQL - " + po.toString());
