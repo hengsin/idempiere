@@ -40,6 +40,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.TrxEventListener;
+import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 import org.idempiere.db.util.SQLFragment;
 
@@ -267,7 +268,49 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 					}
 				}
 			}
+			
+			// Change log
+			if(allSuccess && !deletes.isEmpty() && MTable.get(deletes.get(0).get_Table_ID()).isChangeLog() 
+				&& MSession.get (Env.getCtx()) != null)
+			{				
+				MSession session = MSession.get(Env.getCtx());
+				BatchInsert<MChangeLog> changeLogBatch = new BatchInsert<>(MChangeLog.class);
+				for(T po : deletes) {					
+					if (po.m_IDs.length == 1 || !Util.isEmpty(po.get_UUID(), true))
+					{
+						int	AD_ChangeLog_ID = 0;
+						int size = po.get_ColumnCount();						
+						POInfo poInfo = POInfo.getPOInfo(Env.getCtx(), po.get_Table_ID());
+						for (int i = 0; i < size; i++)
+						{
+							Object value = po.get_ValueOld(i);
+							if (value != null
+								&& poInfo.isAllowLogging(i)		//	logging allowed
+								&& !poInfo.isEncrypted(i)		//	not encrypted
+								&& !poInfo.isVirtualColumn(i)	//	no virtual column
+								&& !"Password".equals(poInfo.getColumnName(i))
+								)
+							{
+								// change log on delete
+								MChangeLog cLog = session.changeLog (
+									po.get_TrxName(), AD_ChangeLog_ID,
+									poInfo.getAD_Table_ID(), poInfo.getColumn(i).AD_Column_ID,
+									(po.m_IDs.length == 1 ? po.get_ID() : 0), po.get_UUID(), po.getAD_Client_ID(), po.getAD_Org_ID(), value, null, MChangeLog.EVENTCHANGELOG_Delete, false);
+								if (cLog != null)
+								{
+									changeLogBatch.add(cLog);
+									AD_ChangeLog_ID = cLog.getAD_ChangeLog_ID();
+								}
+							}
+						} //   for all fields												
+					}
+				}
+				if (!changeLogBatch.isEmpty()) {
+					changeLogBatch.executeBatch(trx.getTrxName());
+				}
+			}
 
+			// After delete
 			if (allSuccess) {
 				for(T po : deletes) {
 					if (!po.afterDelete(true)) {
@@ -286,6 +329,7 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 				}
 			}
 
+			// Commit/Rollback and fire post-delete event
 			if (allSuccess) {
 				if (internalTrx) {
 					trx.commit(true);
