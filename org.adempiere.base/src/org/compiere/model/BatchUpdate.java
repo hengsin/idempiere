@@ -25,6 +25,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Savepoint;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -190,7 +191,7 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 						int[] results = pstmt.executeBatch();
 						for (int i = 0; i < results.length; i++) {
 							T po = processed.get(i);
-							if (results[i] != 1) {
+							if (results[i] != 1 && results[i] != Statement.SUCCESS_NO_INFO) {
 								s_log.warning("Batch execution failed for " + po.toString());
 								if (CLogger.peekError() == null)
 									s_log.saveError("Error", "Batch execution failed - " + po.toString());
@@ -223,6 +224,9 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 			}
 		} catch (Exception e) {
 			s_log.log(Level.SEVERE, "executeBatch", e);
+			if (e instanceof BatchUpdateException batchUpdateException)
+				throw batchUpdateException;
+
 			rollback(trx, internalTrx, savepoint);
 			if (e instanceof RuntimeException runtimeException)
 				throw runtimeException;
@@ -248,7 +252,8 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 	}
 
 	/**
-	 * Throw AdempiereException based on CLogger error
+	 * Throw BatchUpdateException based on CLogger error
+	 * @throws BatchUpdateException
 	 */
 	private void throwSaveError() {
 		StringBuilder msg = new StringBuilder();
@@ -267,7 +272,21 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 		if (msg.length() == 0)
 			msg.append("SaveError");
 		Exception ex = CLogger.retrieveException();
-		throw new AdempiereException(msg.toString(), ex);
+		throw new BatchUpdateException(msg.toString(), ex);
+	}
+
+	/**
+	 * Batch Update Exception
+	 */
+	private static class BatchUpdateException extends AdempiereException {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -2458156172535084920L;
+
+		public BatchUpdateException(String message, Throwable cause) {
+			super(message, cause);
+		}
 	}
 
 	private void rollback(Trx trx, boolean internalTrx, Savepoint savepoint) {

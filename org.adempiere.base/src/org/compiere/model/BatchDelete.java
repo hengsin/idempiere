@@ -252,7 +252,7 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 
 					for (int i = 0; i < results.length; i++) {
 						T po = entry.getValue().get(i).po();
-						if (results[i] <= 0) {
+						if (results[i] <= 0 && results[i] != Statement.SUCCESS_NO_INFO) {
 							s_log.warning("Batch execution failed for " + po.toString());
 							if (CLogger.peekError() == null)
 								s_log.saveError("Error", "Batch execution failed - " + po.toString());
@@ -276,7 +276,13 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 						allSuccess = false;
 						break;
 					}
-					ModelValidationEngine.get().fireModelChange(po, ModelValidator.TYPE_AFTER_DELETE);
+					String error = ModelValidationEngine.get().fireModelChange(po, ModelValidator.TYPE_AFTER_DELETE);
+					if (error != null) {
+						s_log.warning("Validation failed - " + error);
+						s_log.saveError(error, "");
+						allSuccess = false;
+						break;
+					}
 				}
 			}
 
@@ -320,6 +326,9 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 			}
 		} catch (Exception e) {
 			s_log.log(Level.SEVERE, "executeBatch", e);
+			if (e instanceof BatchDeleteException batchDeleteException)
+				throw batchDeleteException;
+			
 			rollback(trx, internalTrx, savepoint);
 			if (e instanceof RuntimeException runtimeException)
 				throw runtimeException;
@@ -345,7 +354,8 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 	}
 
 	/**
-	 * Throw AdempiereException based on CLogger error
+	 * Throw BatchDeleteException based on CLogger error
+	 * @throws BatchDeleteException
 	 */
 	private void throwSaveError() {
 		StringBuilder msg = new StringBuilder();
@@ -364,7 +374,21 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 		if (msg.length() == 0)
 			msg.append("SaveError");
 		Exception ex = CLogger.retrieveException();
-		throw new AdempiereException(msg.toString(), ex);
+		throw new BatchDeleteException(msg.toString(), ex);
+	}
+
+	/**
+	 * Batch Delete Exception
+	 */
+	private static class BatchDeleteException extends AdempiereException {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -7883775051926324726L;
+
+		public BatchDeleteException(String message, Throwable cause) {
+			super(message, cause);
+		}
 	}
 
 	private void rollback(Trx trx, boolean internalTrx, Savepoint savepoint) {

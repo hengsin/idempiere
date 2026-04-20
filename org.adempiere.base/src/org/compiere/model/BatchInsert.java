@@ -184,7 +184,7 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 						int[] results = pstmt.executeBatch();
 						for (int i = 0; i < results.length; i++) {
 							T po = processed.get(i);
-							if (results[i] == Statement.EXECUTE_FAILED) {
+							if (results[i] != 1 && results[i] != Statement.SUCCESS_NO_INFO) {
 								s_log.warning("Batch execution failed for " + po.toString());
 								if (CLogger.peekError() == null)
 									s_log.saveError("Error", "Batch execution failed - " + po.toString());
@@ -222,6 +222,9 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 			}
 		} catch (Exception e) {
 			s_log.log(Level.SEVERE, "executeBatch", e);
+			if (e instanceof BatchInsertException bie)
+				throw bie;
+
 			rollback(trx, internalTrx, savepoint);
 			if (e instanceof RuntimeException runtimeException)
 				throw runtimeException;
@@ -250,7 +253,8 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 	}
 
 	/**
-	 * Throw AdempiereException based on CLogger error
+	 * Throw BatchInsertException based on CLogger error
+	 * @throws BatchInsertException
 	 */
 	private void throwSaveError() {
 		StringBuilder msg = new StringBuilder();
@@ -269,7 +273,21 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 		if (msg.length() == 0)
 			msg.append("SaveError");
 		Exception ex = CLogger.retrieveException();
-		throw new AdempiereException(msg.toString(), ex);
+		throw new BatchInsertException(msg.toString(), ex);
+	}
+
+	/**
+	 * Batch Insert Exception
+	 */
+	private static class BatchInsertException extends AdempiereException {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1111623912170669527L;
+
+		public BatchInsertException(String message, Throwable cause) {
+			super(message, cause);
+		}
 	}
 
 	private void rollback(Trx trx, boolean internalTrx, Savepoint savepoint) {
