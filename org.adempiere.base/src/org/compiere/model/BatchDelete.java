@@ -216,11 +216,12 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 				}
 				int[] results = stmt.executeBatch();
 				for (int i = 0; i < results.length; i++) {
-					if (results[i] == Statement.EXECUTE_FAILED) {
+					if (results[i] < 0 && results[i] != Statement.SUCCESS_NO_INFO) {
 						s_log.warning("Batch execution failed for " + preDeleteStatements.get(i));
 						if (CLogger.peekError() == null)
 							s_log.saveError("Error", "Batch execution failed - " + preDeleteStatements.get(i));
 						allSuccess = false;
+						break;
 					}
 				}
 			} catch (SQLException e) {

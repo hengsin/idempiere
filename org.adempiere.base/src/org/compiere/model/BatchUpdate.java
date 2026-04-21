@@ -200,6 +200,8 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 								break;
 							} else {
 								allSuccess = po.lobSave();
+								if (!allSuccess)
+									break;
 							}
 						}
 						if (!allSuccess) {

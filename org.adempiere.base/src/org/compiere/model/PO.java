@@ -2471,7 +2471,7 @@ public abstract class PO
 	 * Perform standard verification before saving of PO
 	 * @return true if pass verification, false otherwise
 	 */
-	protected boolean doVerificationForSave() {
+	protected final boolean doVerificationForSave() {
 		if (!checkReadOnlySession())
 			return false;
 		checkImmutable();
@@ -2496,7 +2496,7 @@ public abstract class PO
 	 * Perform organization verification
 	 * @return true if pass checking, false otherwise
 	 */
-	protected boolean doOrganizationCheckForSave() {
+	protected final boolean doOrganizationCheckForSave() {
 		//	Organization Check
 		if (getAD_Org_ID() == 0
 			&& (get_AccessLevel() == ACCESSLEVEL_ORG
@@ -2843,7 +2843,7 @@ public abstract class PO
 	 *	@param success current save state
 	 *	@return true if saved
 	 */
-	protected boolean saveFinish (boolean newRecord, boolean success)
+	protected final boolean saveFinish (boolean newRecord, boolean success)
 	{
 		//	Translations
 		if (success)
@@ -3187,7 +3187,7 @@ public abstract class PO
 	 * @param changeLogBatch batch insert for change log
 	 * @return SQL fragment if successful (or with empty sql clause if no changes), null if error
 	 */
-	protected SQLFragment buildUpdateSQL(boolean withValues, StringBuilder whereClauseHolder, BatchInsert<MChangeLog> changeLogBatch) {
+	protected final SQLFragment buildUpdateSQL(boolean withValues, StringBuilder whereClauseHolder, BatchInsert<MChangeLog> changeLogBatch) {
 		//params for insert statement
 		List<Object> params = new ArrayList<Object>();
 
@@ -3613,7 +3613,7 @@ public abstract class PO
 	 * @param trxName transaction
 	 * @return true if success
 	 */
-	protected boolean set_IDForNewRecord(String trxName)
+	protected final boolean set_IDForNewRecord(String trxName)
 	{
 		//  Set ID for single key - Multi-Key values need explicitly be set previously
 		if (m_IDs.length == 1 && p_info.hasKeyColumn()
@@ -3645,7 +3645,7 @@ public abstract class PO
 	/**
 	 * Set UUID for new record
 	 */
-	protected void set_UUIDForNewRecord()
+	protected final void set_UUIDForNewRecord()
 	{
 		int uuidIndex = p_info.getColumnIndex(getUUIDColumnName());
 		if (uuidIndex >= 0)
@@ -3662,7 +3662,7 @@ public abstract class PO
 	/**
 	 * Set DocumentNo for new record
 	 */
-	protected void set_DocumentNoForNewRecord() {
+	protected final void set_DocumentNoForNewRecord() {
 		//	Set new DocumentNo
 		String columnName = "DocumentNo";
 
@@ -3691,7 +3691,7 @@ public abstract class PO
 	/**
 	 * Set Value (Search Key) for new record
 	 */
-	protected void set_ValueForNewRecord() {
+	protected final void set_ValueForNewRecord() {
 		// ticket 1007459 - exclude M_AttributeInstance from filling Value column
 		// IDEMPIERE-4224 - exclude AD_TableAttribute from filling Value column
 		if (!MAttributeInstance.Table_Name.equals(get_TableName())
@@ -3800,7 +3800,7 @@ public abstract class PO
 	 * Internal API, developer should not call this directly.
 	 * @param session session to capture change log
 	 */
-	protected void afterInsertWithValues(MSession session) {
+	protected final void afterInsertWithValues(MSession session) {
 		if (m_IDs.length == 1 && p_info.hasKeyColumn()
 				&& m_KeyColumns[0].endsWith("_ID") && !Env.isUseCentralizedId(p_info.getTableName()))
 		{
@@ -4331,7 +4331,7 @@ public abstract class PO
 	 * @param force
 	 * @return true if pass verification, false otherwise
 	 */
-	protected boolean doVerificationForDelete(boolean force) {
+	protected final boolean doVerificationForDelete(boolean force) {
 		if (!checkReadOnlySession())
 			return false;
 		checkImmutable();
@@ -4370,7 +4370,7 @@ public abstract class PO
 	 * Get delete SQL statement for this PO record
 	 * @return delete SQL statement
 	 */
-	protected SQLFragment get_deleteStatement() {
+	protected final SQLFragment get_deleteStatement() {
 		//	The Delete Statement
 		String where = isLogSQLScript() ? get_WhereClause(true, get_ValueAsString(getUUIDColumnName())) : get_WhereClause(true);
 		List<Object> optimisticLockingParams = new ArrayList<Object>();
@@ -4764,11 +4764,11 @@ public abstract class PO
 
 	/**
 	 * Setup one-off delete actions for transaction event (commit or rollback).<br/>
-	 * Internal use, application should not call this method directly.
+	 * Internal API, developer should not call this directly.
 	 * @param Record_ID 
 	 * @param Record_UU 
 	 */
-	protected void setupDeleteActionsForTransactionEvent(int Record_ID, String Record_UU) {
+	protected final void setupDeleteActionsForTransactionEvent(int Record_ID, String Record_UU) {
 		Trx trxdel = Trx.get(get_TrxName(), false);
 		if (trxdel != null) {
 			int AD_Table_ID = p_info.getAD_Table_ID();
@@ -4809,9 +4809,9 @@ public abstract class PO
 
 	/**
 	 * Reset state after success delete.<br/>
-	 * Internal use, application should not call this method directly.
+	 * Internal API, developer should not call this directly.
 	 */
-	protected void resetStateAfterDelete() {
+	protected final void resetStateAfterDelete() {
 		int size = p_info.getColumnCount();
 		m_oldValues = new Object[size];
 		m_newValues = new Object[size];
@@ -4820,9 +4820,9 @@ public abstract class PO
 	/**
 	 * Fire post delete event to notify interested parties that a record has been deleted.<br/>
 	 * This method is called after the transaction has been committed successfully.<br/>
-	 * Internal use, application should not call this method directly.
+	 * Internal API, developer should not call this directly.
 	 */
-	protected void firePostDeleteEvent() {
+	protected final void firePostDeleteEvent() {
 		if (!postDelete()) {
 			log.warning("postDelete failed");
 		}
@@ -5146,7 +5146,7 @@ public abstract class PO
 	 * 	Get SQL statement for delete of translation records
 	 * 	@return SQL to delete translation records
 	 */
-	protected String get_deleteTranslationsSQL()
+	protected final String get_deleteTranslationsSQL()
 	{
 		//	Not a translation table
 		if (m_IDs.length > 1
@@ -5428,7 +5428,7 @@ public abstract class PO
 	 * @param doChildNodesValidation true to validate whether child nodes exists and throw exception if child nodes exists
 	 * @return SQL statement to delete tree records
 	 */
-	protected String get_deleteTreeSQL(String treeType, boolean doChildNodesValidation) {
+	protected final String get_deleteTreeSQL(String treeType, boolean doChildNodesValidation) {
 		int id = get_ID();
 		if (id == 0)
 			id = get_IDOld();
@@ -5838,7 +5838,7 @@ public abstract class PO
 	 * 	Save LOB
 	 * 	@return true if saved ok
 	 */
-	protected boolean lobSave ()
+	protected final boolean lobSave ()
 	{
 		if (m_lobInfo == null)
 			return true;
