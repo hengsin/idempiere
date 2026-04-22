@@ -165,6 +165,7 @@ public class BatchUpdate<T extends PO> implements IBatchOperation<T> {
 				}
 
 				sql = sqlFragment.sqlClause();
+				sql = DB.getDatabase().convertStatement(sql);
 				sqlMap.computeIfAbsent(sql, k -> new ArrayList<>()).add(new BatchElement<>(po, sqlFragment.parameters()));
 			}
 

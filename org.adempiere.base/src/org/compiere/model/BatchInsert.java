@@ -166,7 +166,8 @@ public class BatchInsert<T extends PO> implements IBatchOperation<T> {
 				List<Object> params = new ArrayList<>();
 				po.buildInsertSQL(sqlb, po.isLogSQLScript(), params, session, 0, false, null, changeLogBatch);
 
-				sqlMap.computeIfAbsent(sqlb.toString(), k -> new ArrayList<>()).add(new BatchElement<>(po, params));
+				String sql = DB.getDatabase().convertStatement(sqlb.toString());
+				sqlMap.computeIfAbsent(sql, k -> new ArrayList<>()).add(new BatchElement<>(po, params));
 			}
 
 			// execute batch insert

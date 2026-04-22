@@ -211,7 +211,8 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 			Statement stmt = null;
 			try {
 				stmt = conn.createStatement();
-				for (String sql : preDeleteStatements) {					
+				for (String sql : preDeleteStatements) {	
+					sql = DB.getDatabase().convertStatement(sql);				
 					stmt.addBatch(sql);
 				}
 				int[] results = stmt.executeBatch();
@@ -241,6 +242,7 @@ public class BatchDelete<T extends PO> implements IBatchOperation<T> {
 			// 5. Execute delete
 			for (Map.Entry<String, List<BatchElement<T>>> entry : sqlMap.entrySet()) {
 				String sql = entry.getKey();
+				sql = DB.getDatabase().convertStatement(sql); 
 				try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
 					for (BatchElement<T> element : entry.getValue()) {
 						List<Object> params = element.parameters();
